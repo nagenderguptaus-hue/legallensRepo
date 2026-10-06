@@ -1,0 +1,30 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: calc(var(--thread-width) - 2 * var(--space-6));
+  width: calc(100% - 2 * var(--space-6));
+  margin: var(--space-2) auto 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid #f5c6c6;
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  font-size: var(--text-sm);
+  animation: fade-in var(--duration) var(--ease);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--danger);
+}
+
+.text {
+  flex: 1;
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .banner {
+    flex-wrap: wrap;
+  }
+}

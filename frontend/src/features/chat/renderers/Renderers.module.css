@@ -1,0 +1,70 @@
+.summaryCard,
+.draftCard {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardHeader,
+.draftToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.cardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.summaryCard .cardTitle svg {
+  color: var(--intent-summary);
+}
+
+.draftCard .cardTitle svg {
+  color: var(--intent-draft);
+}
+
+.cardSubtitle {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardBody {
+  padding: var(--space-5) var(--space-6);
+}
+
+.toolbarRight {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.paper {
+  padding: var(--space-10) clamp(var(--space-5), 6%, var(--space-12));
+  background: var(--paper);
+  background-image: linear-gradient(to bottom, rgba(29, 36, 51, 0.025), transparent 40px);
+}
+
+@media (max-width: 640px) {
+  .draftToolbar {
+    flex-wrap: wrap;
+  }
+  .paper {
+    padding: var(--space-6) var(--space-5);
+  }
+}

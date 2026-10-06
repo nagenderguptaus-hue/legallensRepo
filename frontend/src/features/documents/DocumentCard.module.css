@@ -1,0 +1,167 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition:
+    border-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+  animation: fade-in var(--duration) var(--ease);
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+}
+
+.inUse {
+  border-color: #b9c8dc;
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.failed {
+  border-color: #f0cfcf;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.fileIcon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 44px;
+  border-radius: 8px;
+}
+
+.pdf {
+  background: #fbeeee;
+  color: #b42323;
+}
+
+.docx {
+  background: #eaf0fb;
+  color: #2456b3;
+}
+
+.ext {
+  position: absolute;
+  bottom: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.fileIcon svg {
+  margin-top: -8px;
+}
+
+.info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* ---- progress */
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progressText {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.progressStep {
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
+.progressTrack {
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+}
+
+.progressBar {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: width 600ms var(--ease);
+}
+
+/* ---- failed */
+.failure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ---- warnings */
+.warnings {
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--text-xs);
+}
+
+.warnings summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.warnings ul {
+  margin: 0;
+  padding: 0 10px 8px 30px;
+}
+
+.useButton {
+  align-self: flex-start;
+}

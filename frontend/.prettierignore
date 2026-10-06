@@ -1,0 +1,7 @@
+dist
+node_modules
+public/mockServiceWorker.js
+playwright-report
+test-results
+TODO.md
+docs

@@ -1,0 +1,159 @@
+.markdown {
+  color: var(--text);
+  font-size: var(--text-md);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown p,
+.markdown ul,
+.markdown ol {
+  margin: 0 0 0.85em;
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: 1.4em;
+}
+
+.markdown li + li {
+  margin-top: 0.3em;
+}
+
+.markdown strong {
+  font-weight: 650;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 1.3em 0 0.45em;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.markdown h3 {
+  font-size: var(--text-md);
+}
+
+.markdown code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+.markdown blockquote {
+  margin: 0 0 0.85em;
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-muted);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 0 1em;
+}
+
+.markdown table {
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.markdown th,
+.markdown td {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.markdown th {
+  background: var(--surface-sunken);
+}
+
+/* ---- summary: section labels */
+.summary h3 {
+  margin: 1.4em 0 0.4em;
+  color: var(--intent-summary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summary h3:first-child {
+  margin-top: 0;
+}
+
+.summary em {
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+/* ---- draft: legal-document typography */
+.draft {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+
+.draft h3 {
+  margin: 1.5em 0 0.5em;
+  font-size: 1.0625rem;
+  font-weight: 650;
+}
+
+.draft p:first-child strong {
+  display: block;
+  margin-bottom: 0.3em;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.draft em {
+  color: var(--text-muted);
+}
+
+/* ---- placeholders in drafts */
+.placeholder {
+  padding: 1px 5px;
+  border: 1px dashed var(--warning-border);
+  border-radius: 4px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-family: var(--font-sans);
+  font-size: 0.82em;
+  font-weight: 600;
+  cursor: help;
+  white-space: nowrap;
+}
+
+/* ---- streaming caret */
+.streaming > :last-child::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  border-radius: 2px;
+  background: var(--primary);
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}

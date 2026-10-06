@@ -1,0 +1,92 @@
+.panel {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  visibility: hidden;
+}
+
+.panel[data-open] {
+  visibility: visible;
+}
+
+.tabsRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  /* fixed width (minus the 1px border) so content doesn't reflow while the column animates */
+  width: calc(var(--panel-width) - 1px);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: var(--topbar-height);
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.tabList {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+}
+
+.tab {
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.tab[data-state='active'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  outline: none;
+}
+
+.content[data-state='inactive'] {
+  display: none;
+}
+
+/* Below 1280px the panel overlays the chat. */
+@media (max-width: 1279px) {
+  .panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: var(--z-panel);
+    width: min(var(--panel-width), 100vw);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(100%);
+    transition:
+      transform var(--duration) var(--ease),
+      visibility var(--duration);
+  }
+  .panel[data-open] {
+    transform: none;
+  }
+  .tabsRoot {
+    width: 100%;
+  }
+}

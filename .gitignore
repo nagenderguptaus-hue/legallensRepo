@@ -1,0 +1,13 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Secrets and local config (NFR-5)
+.env
+.env.*
+!.env.example
+
+# Local data: uploaded documents, SQLite DB (never commit client data)
+data/

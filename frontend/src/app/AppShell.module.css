@@ -1,0 +1,71 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  transition: grid-template-columns var(--duration) var(--ease);
+}
+
+.sidebarCollapsed {
+  grid-template-columns: var(--sidebar-rail) minmax(0, 1fr) 0;
+}
+
+.panelOpen {
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--panel-width);
+}
+
+.sidebarCollapsed.panelOpen {
+  grid-template-columns: var(--sidebar-rail) minmax(0, 1fr) var(--panel-width);
+}
+
+.main {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.scrim {
+  display: none;
+}
+
+/* Below 1280px the documents panel floats over the chat instead of squeezing it. */
+@media (max-width: 1279px) {
+  .shell,
+  .panelOpen {
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 0;
+  }
+  .sidebarCollapsed,
+  .sidebarCollapsed.panelOpen {
+    grid-template-columns: var(--sidebar-rail) minmax(0, 1fr) 0;
+  }
+  .panelOpen .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-panel) - 1);
+    background: rgba(29, 36, 51, 0.18);
+  }
+}
+
+/* Below 1024px the sidebar becomes a drawer. */
+@media (max-width: 1023px) {
+  .shell,
+  .panelOpen,
+  .sidebarCollapsed,
+  .sidebarCollapsed.panelOpen {
+    grid-template-columns: 0 minmax(0, 1fr) 0;
+  }
+  .mobileSidebarOpen .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-overlay) - 1);
+    background: rgba(29, 36, 51, 0.32);
+  }
+}

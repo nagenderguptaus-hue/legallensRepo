@@ -1,0 +1,5 @@
+now, based on this ideas.md, I want to create a BRD/PRD/FRD. Fundamentally, I want my document to be 4 to 5 pages, not more than that. I want this to be not too business-oriented, not for stakeholders, not product-oriented, and not too technical. It has to be a hybrid mix of all those things for this LegalLens project.
+
+Primarily, this project is built to demonstrate to a bunch of students in my class, so it's not a real-world application, but this has to be production-grade. Create that hybrid document, whatever I am talking about, to have a BRD, PRD, and FRD with technical and non-technical, or functional and non-functional, specs.
+
+Whenever you are creating this, I know there would be many questions that come to your mind. Please try to ask all those questions so that I can clarify them for you later, and you can draft this PR/BRD document or hybrid document, whatever I'm talking about.
