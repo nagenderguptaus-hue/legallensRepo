@@ -2,7 +2,9 @@
 
 The user interface for **Legal Lens**, a private, local AI assistant for lawyers. It answers questions from your documents (with citations), summarizes them, and drafts memos and case briefs.
 
-This package is **UI only**. Until the FastAPI backend exists, a **mock backend (MSW)** answers the real API endpoints, so every screen and state can be demoed today.
+It runs in two modes:
+- **Mock mode** (the default, `npm run dev`): a **mock backend (MSW)** in the browser answers the real API endpoints. No Python needed, and every screen and state can be demoed.
+- **Backend mode** (`npm run dev:stack`): the same UI talks to the real FastAPI service in [../backend](../backend). See [Running against the real backend](#running-against-the-real-backend).
 
 ![Answer with citation and highlighted source](docs/screenshots/02-answer-with-source.png)
 
@@ -18,14 +20,20 @@ Requires Node.js 20+ (developed on Node 24 LTS).
 | Script | What it does |
 |---|---|
 | `npm run dev` | Dev server with hot reload and the mock backend |
-| `npm run build` | Typecheck, then production build in `dist/` |
-| `npm run preview` | Serve the production build at http://localhost:4173 |
+| `npm run dev:stack` | Starts the FastAPI backend **and** the dev server in backend mode, in one terminal (needs [uv](https://docs.astral.sh/uv/)) |
+| `npm run dev:api` | Dev server in backend mode only (start the backend yourself) |
+| `npm run build` | Typecheck, then production build in `dist/` (mock mode) |
+| `npm run build:api` | Typecheck, then production build in `dist-backend/` (backend mode, no mock code) |
+| `npm run preview` · `preview:api` | Serve those builds at http://localhost:4173 · :4174 |
 | `npm run lint` | ESLint, zero warnings allowed |
 | `npm run typecheck` | TypeScript for the app, the tests and the tooling configs |
 | `npm test` | Unit and component tests (Vitest + Testing Library + MSW) |
-| `npm run test:e2e` | End-to-end demo path in Microsoft Edge (Playwright) |
+| `npm run test:e2e` | End-to-end demo path in Microsoft Edge (Playwright), against the mocks |
+| `npm run test:e2e:api` | The same kind of demo path against the **real backend** (starts its own on port 8010 with a fresh data folder) |
 
-## Demo script (BRD §7)
+## Demo script (BRD §7), mock mode
+
+For the real backend, use the demo script in the [project README](../README.md#class-demo-script) instead.
 
 The app opens with sample data: a commercial lease, a mutual NDA, a **scanned** court opinion, a document still being OCR'd and a failed upload.
 
@@ -61,16 +69,24 @@ src/
 - **Accessibility:** Radix primitives (focus management, keyboard support), visible focus rings, `aria-live` announcements when a reply finishes, and reduced-motion support.
 - **Fonts:** Inter and Source Serif 4 are bundled locally, so the app works offline.
 
-## Switching to the real backend
+## Running against the real backend
 
-The UI only ever calls `/api/*`. To use the FastAPI backend instead of mocks:
+The UI only ever calls relative `/api/*` URLs, so switching backends needs no UI code changes. Backend mode is the Vite mode file [.env.backend](.env.backend):
+- `VITE_USE_MOCKS=false`: MSW never starts, and the mock code isn't even in the build.
+- The dev and preview servers proxy `/api` to `VITE_API_TARGET` (default `http://127.0.0.1:8000`).
 
 ```bash
-# .env.local
-VITE_USE_MOCKS=false
+npm run dev:stack            # backend + frontend, Ctrl+C stops both
+# load the demo data (in another terminal, from ../backend):
+uv run python scripts/seed_demo.py
 ```
 
-Then proxy `/api` to FastAPI (for example with `server.proxy` in `vite.config.ts`). No UI code changes.
+To point at a backend on another port or host, override the target: `VITE_API_TARGET=http://127.0.0.1:8010 npm run dev:api`, or put it in a git-ignored `.env.backend.local`.
+
+Differences from mock mode:
+- **Demo controls** (the flask icon) only exist in mock mode. With the real backend, the same scenarios are backend settings: `LL_STANDIN_TOKEN_DELAY_MS` (slow model), `LL_STANDIN_FAIL_MIDSTREAM`, `LL_STANDIN_MODEL_OFFLINE`. **Reset demo data** is `seed_demo.py --fresh`.
+- **No OCR yet:** the backend's stand-in can't read scanned PDFs, so they show *Failed* until the AI layer arrives.
+- **If the backend isn't running**, the app says *"Can't reach the Legal Lens service"* and reconnects by itself when it starts.
 
 ### API contract the backend must implement
 
@@ -91,4 +107,4 @@ Errors use the envelope `{ code, message, request_id }`. All shapes are defined 
 
 - **Unit:** SSE parsing (including split chunks), markdown citation and placeholder handling, date grouping, file validation, intent detection and the ingestion simulator. A check also confirms every mock citation quote really appears on its page.
 - **Component:** the full app rendered against MSW: streaming answers with citations, the source viewer, not-found, clarify chips, offline model, sidebar search/rename/delete, upload and validation.
-- **End-to-end:** `e2e/demo.spec.ts` runs the BRD demo path in Edge, including Stop generating, reload and document deletion.
+- **End-to-end:** `e2e/demo.spec.ts` runs the BRD demo path in Edge against the mocks, including Stop generating, reload and document deletion. `e2e/integration.spec.ts` (`npm run test:e2e:api`) runs it against the real backend with documents built by the backend's own factories. Set `PW_CHANNEL=chromium` to use Playwright's Chromium instead of Edge (CI does).

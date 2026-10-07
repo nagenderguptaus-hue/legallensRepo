@@ -1,6 +1,6 @@
 # Legal Lens — Integration TODO (frontend ↔ backend)
 
-> **Status:** 🚧 approved 2026-10-06 (all §6 recommendations accepted), implementation in progress on branch `integration`.
+> **Status:** ✅ implemented 2026-10-06 on branch `integration` (all §6 recommendations accepted). Everything runs green locally: backend 92 tests (93% coverage), frontend 50 unit/component tests, the mock e2e test, and 3 real-backend e2e tests. **Open:** the Docker images and the Compose stack are written but unbuilt, because Docker isn't installed on this laptop. CI builds and smoke-tests them on the first push (see §9).
 > **Scope:** connect the existing React frontend ([frontend/](frontend/)) to the existing FastAPI backend ([backend/](backend/)). There is still no AI layer: the backend keeps its stand-in adapters. That is Phase 3 of the BRD.
 > **Builds on:** [frontend/TODO.md](frontend/TODO.md) (done) · [backend/TODO.md](backend/TODO.md) (done, open items in §11) · contract source of truth: [frontend/src/api/types.ts](frontend/src/api/types.ts)
 
@@ -112,8 +112,8 @@ Run `dev:stack` against a **fresh data dir**, go through each row, and record �
 
 ### Phase 4 · Demo controls in real mode (G2)
 Depends on Q2. Recommended option (B):
-- [ ] Keep the dialog **mock-only**, as it is now. In real mode the same scenarios come from the backend's env flags (`LL_STANDIN_TOKEN_DELAY_MS`, `LL_STANDIN_FAIL_MIDSTREAM`, `LL_STANDIN_MODEL_OFFLINE`).
-- [ ] Add a **"Reset demo data"** recipe to the README (stop the backend → delete the data dir → start → seed). Optionally add `seed_demo.py --fresh` to automate it.
+- [x] Keep the dialog **mock-only**, as it is now. In real mode the same scenarios come from the backend's env flags (`LL_STANDIN_TOKEN_DELAY_MS`, `LL_STANDIN_FAIL_MIDSTREAM`, `LL_STANDIN_MODEL_OFFLINE`).
+- [x] Add a **"Reset demo data"** recipe to the README. **Changed:** `seed_demo.py --fresh` deletes everything through the API, then re-seeds. There's no need to stop the backend or touch the data folder, and it works against Docker too.
 
 ### Phase 5 · Demo data parity (G8)
 - [x] Extend `backend/scripts/seed_demo.py` (synthetic content only, generated in code, uploaded **through the API** so it works against any deployment):
@@ -123,7 +123,7 @@ Depends on Q2. Recommended option (B):
   - conversations that cover ask with follow-up · not found · summary · draft memo · clarify · source deleted
   - **Note:** the documents live in `backend/scripts/demo_documents.py`, shared with the e2e fixtures. A fourth file, `Old_Engagement_Letter.pdf`, is uploaded, used in one chat, then deleted, to produce the "source deleted" conversation.
 - [x] `--fresh` flag (refuses unless the target is loopback) and idempotent re-runs (skips existing duplicates, as it does today)
-- [ ] Update the class demo script (BRD §7) with questions that work against these documents
+- [x] Update the class demo script (BRD §7) with questions that work against these documents. **Note:** the BRD itself only lists acceptance criteria and is unchanged. The script is in the new root [README.md](README.md#class-demo-script).
 
 ### Phase 6 · End-to-end tests against the real backend (G3)
 - [x] Keep `e2e/demo.spec.ts` on **mocks**: a fast, deterministic UI test
@@ -136,31 +136,31 @@ Depends on Q2. Recommended option (B):
 
 ### Phase 7 · Full-stack packaging (G9, portability)
 Depends on Q3. Recommended option (nginx):
-- [ ] `frontend/Dockerfile`: multi-stage, Node builds with `--mode backend` → `nginx-unprivileged` serves `dist/`
-- [ ] `frontend/nginx.conf`:
+- [x] `frontend/Dockerfile`: multi-stage, Node builds with `--mode backend` → `nginx-unprivileged` serves `dist/`
+- [x] `frontend/nginx.conf` (also: Docker DNS re-resolution, so nginx starts and answers 502 → "service not reachable" while the backend is down, plus `/healthz` and basic security headers):
   - `/api` proxied to `backend:8000` with `proxy_buffering off` and `proxy_read_timeout 360s` (SSE)
   - `client_max_body_size 26m` (the 25 MB upload limit plus multipart overhead)
   - SPA fallback to `index.html`, long cache for hashed assets
-- [ ] `LegalLens/compose.yaml` (whole stack):
+- [x] `LegalLens/compose.yaml` (whole stack):
   - `frontend` published on `127.0.0.1:8080` only
   - `backend` **not published at all**: reachable only on the internal Compose network, which is even tighter than today for NFR-5
   - `depends_on: service_healthy`
   - the data volume carried over from `backend/compose.yaml`
-- [ ] `backend/compose.yaml` stays for backend-only use
-- [ ] Same origin through nginx, so no CORS changes are needed
-- [ ] Docker isn't installed on this laptop, so the build is verified in CI (Phase 8), the same as the backend image today
+- [x] `backend/compose.yaml` stays for backend-only use. **Note:** it uses its own data volume, separate from the full stack's.
+- [x] Same origin through nginx, so no CORS changes are needed
+- [ ] Docker isn't installed on this laptop, so the build is verified in CI (Phase 8), the same as the backend image today. **Open until the first push.**
 
 ### Phase 8 · CI (G10)
-- [ ] `.github/workflows/frontend.yml`: `npm ci` → lint → typecheck → test → build → e2e (mocks, Chromium). Runs on `frontend/**` changes.
-- [ ] `.github/workflows/integration.yml`: uv + Node → `uv sync --locked` → `npm ci` → `test:e2e:api`. Runs on `frontend/**` or `backend/**` changes. Uploads the Playwright trace on failure.
-- [ ] Compose smoke job: `docker compose up -d --build`, then `http://127.0.0.1:8080/` serves the app and `http://127.0.0.1:8080/api/health` answers through nginx. Then tear down.
+- [x] `.github/workflows/frontend.yml`: `npm ci` → lint → typecheck → test → build → e2e (mocks, Chromium). Runs on `frontend/**` changes.
+- [x] `.github/workflows/integration.yml`: uv + Node → `uv sync --locked` → `npm ci` → `test:e2e:api`. Runs on `frontend/**` or `backend/**` changes. Uploads the Playwright trace on failure.
+- [x] Compose smoke job (also checks the SPA fallback, an SSE reply streamed through nginx, and that port 8000 is **not** reachable from the host): `docker compose up -d --build`, then `http://127.0.0.1:8080/` serves the app and `http://127.0.0.1:8080/api/health` answers through nginx. Then tear down.
 
 ### Phase 9 · Docs and close-out (G11)
-- [ ] New `LegalLens/README.md`: what the project is, folder map, the run-modes table (§3), links to the BRD, the architecture diagram and each README
-- [ ] Update the frontend README ("Switching to the real backend") and the backend README ("Connecting the frontend", "Reset demo data") with the real commands
-- [ ] Close backend TODO §11 item 4 and frontend TODO DoD; set this file's status
-- [ ] Optional: screenshots of the app running against the real backend for the class slides
-- [ ] Both sides green: frontend lint/typecheck/test/build/e2e (both projects), backend ruff/mypy/pytest
+- [x] New `LegalLens/README.md`: what the project is, folder map, the run-modes table (§3), links to the BRD, the architecture diagram and each README
+- [x] Update the frontend README ("Switching to the real backend") and the backend README ("Connecting the frontend", "Reset demo data") with the real commands
+- [x] Close backend TODO §11 item 4 and frontend TODO DoD; set this file's status
+- [ ] Optional, skipped: screenshots of the app running against the real backend for the class slides
+- [x] Both sides green: frontend lint/typecheck/test/build/e2e (both projects), backend ruff/mypy/pytest
 
 ---
 
@@ -209,3 +209,10 @@ Depends on Q3. Recommended option (nginx):
 - `docker compose up --build` in `LegalLens/` serves the whole app on `127.0.0.1:8080` (verified in CI).
 - Both sides stay green: frontend lint/typecheck/test/build/e2e and backend ruff/mypy/pytest. The contract tests still pass.
 - The READMEs explain every run mode.
+
+---
+
+## 9. Open items
+1. **Push the repo to GitHub.** That runs the three workflows for the first time and builds both Docker images. The only unverified pieces are the `frontend/Dockerfile`, `nginx.conf` and the root `compose.yaml`.
+2. Or **install Docker Desktop** (`winget install Docker.DockerDesktop`; needs WSL2 and a reboot), then run `docker compose up --build` in `LegalLens/` and `uv run python scripts/seed_demo.py --url http://127.0.0.1:8080` in `backend/`.
+3. **Merge** branch `integration` into `main` when you're happy.

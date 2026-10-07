@@ -20,10 +20,12 @@ uv sync                      # create .venv from the lock file
 uv run legallens-api         # http://127.0.0.1:8000  ·  API docs at /api/docs
 ```
 
-In a second terminal, load demo data (a synthetic NDA and lease, plus one conversation):
+In a second terminal, load the demo data: a synthetic lease (PDF) and NDA (DOCX), a scan that fails (no OCR yet), and five conversations covering ask, not found, summary, draft, clarify and a deleted source. Everything goes in through the API, so this works against any running instance.
 
 ```bash
-uv run python scripts/seed_demo.py
+uv run python scripts/seed_demo.py                 # add the demo data (safe to re-run)
+uv run python scripts/seed_demo.py --fresh         # reset: delete everything, then seed (loopback only)
+uv run python scripts/seed_demo.py --url http://127.0.0.1:8080   # e.g. the Docker stack
 ```
 
 `python -m legallens` works too.
@@ -97,13 +99,19 @@ Routes, services and the database don't change. The `chunks` table and the `chun
 
 ## Connecting the frontend
 
-The frontend calls relative `/api/...` URLs. Add a dev proxy in `frontend/vite.config.ts`:
+The frontend has a "backend" mode that proxies its relative `/api/...` calls here. From `frontend/`:
 
-```ts
-server: { port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:8000' } },
+```bash
+npm run dev:stack      # starts this backend and the UI together → http://localhost:5173
 ```
 
-Then run the frontend with `VITE_USE_MOCKS=false`. The contract tests in `tests/contract/` read `frontend/src/api/types.ts` directly and fail if the two sides drift apart.
+The frontend README has the details, under "Running against the real backend". Through a proxy there is no cross-origin traffic, so `LL_CORS_ORIGINS` only matters if a page on another origin calls the API directly.
+
+Two kinds of test keep the sides in step:
+- The contract tests in `tests/contract/` read `frontend/src/api/types.ts` and fail if the two sides drift apart.
+- `npm run test:e2e:api` in `frontend/` drives the real UI against this backend.
+
+`scripts/demo_documents.py` builds the synthetic documents that both the seed script and those e2e tests use.
 
 ## Deploying elsewhere
 
@@ -118,10 +126,10 @@ LL_DATA_DIR=/path/to/data uv run legallens-api
 
 All dependencies install from pre-built wheels; no compiler is needed.
 
-**With Docker:**
+**With Docker:** the whole app (frontend and backend) runs from `compose.yaml` in the project root: `docker compose up --build` there, then open http://127.0.0.1:8080. For the backend alone:
 
 ```bash
-docker compose up --build        # uses compose.yaml
+docker compose up --build        # uses backend/compose.yaml
 ```
 
 The equivalent without Compose:

@@ -375,4 +375,4 @@ CI workflow: `LegalLens/.github/workflows/backend.yml` (the repo root). As built
 1. **Docker:** not installed here, so the image and `compose.yaml` are unbuilt. Either install Docker Desktop (`winget install Docker.DockerDesktop`; needs WSL2 and a reboot) and run `docker compose up --build` in `backend/`, or let the CI `docker` job verify it after the first push.
 2. **First commit:** set your identity (`git config --global user.name "…"` and `user.email "…"`), then commit from `LegalLens/`.
 3. **CI:** runs once `LegalLens/` is pushed to GitHub.
-4. **Integration (next step):** add the Vite proxy (README, "Connecting the frontend") and run the frontend with `VITE_USE_MOCKS=false`.
+4. ~~**Integration (next step)**~~ **Done**: see [../integration.todo.md](../integration.todo.md). The full-stack Compose file and its CI smoke test live at the project root.

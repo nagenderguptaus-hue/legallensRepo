@@ -1,0 +1,83 @@
+name: integration
+
+# The frontend and backend together: Playwright against the real FastAPI backend, and the
+# full Docker Compose stack (nginx → FastAPI) smoke-tested end to end.
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "compose.yaml"
+      - ".github/workflows/integration.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "compose.yaml"
+      - ".github/workflows/integration.yml"
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: e2e against the real backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: uv sync --locked
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:e2e:api
+        working-directory: frontend
+        env:
+          PW_CHANNEL: chromium
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-real-backend
+          path: frontend/test-results
+
+  compose:
+    name: docker compose smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker compose up --build --detach --wait --wait-timeout 180
+      - name: app shell, SPA fallback, health through nginx
+        run: |
+          curl -fsS http://127.0.0.1:8080/ | grep -q 'id="root"'
+          curl -fsS http://127.0.0.1:8080/c/conv_anything | grep -q 'id="root"'
+          curl -fsS http://127.0.0.1:8080/api/health | tee /dev/stderr | grep -q '"modelRuntime":"ready"'
+      - name: a chat reply streams through nginx (SSE)
+        run: |
+          conv=$(curl -fsS -X POST http://127.0.0.1:8080/api/conversations \
+            -H 'Content-Type: application/json' -d '{}' | python3 -c 'import sys, json; print(json.load(sys.stdin)["id"])')
+          curl -fsS -N --max-time 60 -X POST http://127.0.0.1:8080/api/chat/stream \
+            -H 'Content-Type: application/json' \
+            -d "{\"conversation_id\":\"$conv\",\"message\":\"What is the term of the lease?\",\"document_ids\":[]}" \
+            | tee /tmp/stream.txt
+          grep -q '^event: intent' /tmp/stream.txt
+          grep -q '"outcome":"needs_document"' /tmp/stream.txt
+      - name: the backend is not published on the host
+        run: |
+          if curl -fsS --max-time 3 http://127.0.0.1:8000/api/health; then
+            echo "backend port 8000 is reachable from the host" && exit 1
+          fi
+      - if: failure()
+        run: docker compose logs
+      - if: always()
+        run: docker compose down --volumes

@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-backend
+test-results
+playwright-report
+e2e/.fixtures
+docs
+*.local
+Dockerfile
+.dockerignore

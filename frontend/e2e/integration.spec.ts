@@ -45,19 +45,19 @@ test('BRD demo path against the real backend', async ({ page }) => {
   // 1. Upload a real PDF; ingestion runs on the backend and the card turns Ready.
   await page.locator('input[type=file]').setInputFiles(fixture(LEASE));
   await expect(card(page, LEASE).getByText('Ready')).toBeVisible();
-  await expect(page.getByRole('button', { name: new RegExp(`^Document: ${LEASE.replace('.', '\\.')}`) })).toBeVisible();
+  await expect(page.getByRole('button', { name: new RegExp(`^Document: ${LEASE_RE}`) })).toBeVisible();
 
   // 2. Ask: the answer quotes §5 with a citation that opens the exact passage.
   await send(page, 'Can the tenant terminate the lease early?');
   const thread = page.getByRole('region', { name: 'Conversation' });
   await expect(thread.getByText(/Tenant may terminate this Lease early/).first()).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Can the tenant terminate the lease early' })).toBeVisible();
-  await page.getByRole('button', { name: new RegExp(`^Source 1: ${LEASE.replace('.', '\\.')}, page 3`) }).first().click();
+  await page.getByRole('button', { name: new RegExp(`^Source 1: ${LEASE_RE}, page 3`) }).first().click();
   await expect(page.locator('mark', { hasText: 'Tenant may terminate this Lease early' })).toBeVisible();
 
   // 3. A quote the backend shortened ("…") is still highlighted on its page.
   await send(page, 'Who must indemnify the landlord and for which claims?');
-  await page.getByRole('button', { name: new RegExp(`^Source 1: ${LEASE.replace('.', '\\.')}, page 4`) }).last().click();
+  await page.getByRole('button', { name: new RegExp(`^Source 1: ${LEASE_RE}, page 4`) }).last().click();
   await expect(page.locator('mark', { hasText: 'Tenant shall indemnify, defend and hold harmless' })).toBeVisible();
 
   // 4. A question the lease can't answer.

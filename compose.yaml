@@ -1,0 +1,32 @@
+# The whole Legal Lens stack: nginx (frontend + /api proxy) in front of the FastAPI backend.
+#   docker compose up --build        then open http://127.0.0.1:8080
+# Only the frontend is published, and only on this computer's loopback (NFR-5); the backend is
+# reachable only from the frontend container. Backend-only setup: backend/compose.yaml.
+name: legallens
+
+services:
+  backend:
+    build: ./backend
+    image: legallens-backend:local
+    expose:
+      - "8000"
+    volumes:
+      - legallens-data:/data # documents + SQLite survive rebuilds
+    env_file:
+      - path: backend/.env
+        required: false
+    restart: unless-stopped
+    stop_grace_period: 15s
+
+  frontend:
+    build: ./frontend
+    image: legallens-frontend:local
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  legallens-data:

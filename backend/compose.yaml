@@ -1,4 +1,4 @@
-# Backend only for now; the frontend service is added when the two are integrated.
+# Backend only. The whole stack (frontend + backend) is ../compose.yaml.
 #   docker compose up --build
 services:
   backend:

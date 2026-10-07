@@ -265,4 +265,4 @@ Real backend calls, authentication, dark theme, draft editing or export, multi-d
 - Every component has its loading, empty and error states.
 - Keyboard-only use works throughout.
 - `lint`, `typecheck`, `test` and `build` are green.
-- Switching `VITE_USE_MOCKS=false` makes the UI call the real `/api/*` endpoints, with no code changes.
+- Switching `VITE_USE_MOCKS=false` makes the UI call the real `/api/*` endpoints, with no code changes. **Done** in [../integration.todo.md](../integration.todo.md) (`npm run dev:stack`). A few UI fixes for real-backend conditions were needed (findings F1–F5 there), but no contract changes.
