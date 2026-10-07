@@ -1,6 +1,9 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
+import type { ConversationDetail } from '@/api/types';
 import { updateSettings } from '@/mocks/db';
+import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
 
 async function waitForDocumentContext() {
@@ -119,5 +122,44 @@ describe('documents', () => {
   it('marks a conversation when its source document is deleted', async () => {
     renderApp('/c/conv_employment');
     expect(await screen.findByText('Source document deleted')).toBeInTheDocument();
+  });
+});
+
+describe('real backend conditions', () => {
+  const badGateway = () => new HttpResponse('Bad gateway', { status: 502 });
+
+  it('says the service is down (not the model) and recovers when it comes back', async () => {
+    server.use(http.get('/api/health', badGateway), http.get('/api/documents', badGateway));
+    const { user } = renderApp('/');
+    expect(await screen.findByText('Can’t reach the Legal Lens service.')).toBeInTheDocument();
+    expect(screen.getByText('Service not reachable')).toBeInTheDocument();
+    expect(screen.queryByText(/documents and conversations are still available/)).not.toBeInTheDocument();
+
+    // The backend starts: the next health check succeeds and the failed library reloads.
+    server.resetHandlers();
+    await user.click(screen.getByRole('button', { name: 'Check again' }));
+    await waitFor(() => expect(screen.queryByText('Can’t reach the Legal Lens service.')).not.toBeInTheDocument());
+    expect((await screen.findAllByText('Commercial_Lease_Agreement.pdf')).length).toBeGreaterThan(0);
+  });
+
+  it('shows a reply still generating on the server and polls until it is done', async () => {
+    const stillStreaming: ConversationDetail = {
+      id: 'conv_lease_exit',
+      title: 'Lease: early termination rights',
+      createdAt: '2026-10-06T10:00:00.000Z',
+      updatedAt: '2026-10-06T10:00:00.000Z',
+      documentId: null,
+      documentDeleted: false,
+      messages: [
+        { id: 'msg_u', conversationId: 'conv_lease_exit', role: 'user', content: 'Can the tenant leave early?', createdAt: '2026-10-06T10:00:00.000Z', status: 'complete', intent: null, outcome: null, citations: [], suggestions: [], documentId: null },
+        { id: 'msg_a', conversationId: 'conv_lease_exit', role: 'assistant', content: '', createdAt: '2026-10-06T10:00:00.000Z', status: 'streaming', intent: 'ask', outcome: null, citations: [], suggestions: [], documentId: null },
+      ],
+    };
+    // First load: the reply is still streaming server-side. Later loads: the seeded, finished thread.
+    server.use(http.get('/api/conversations/conv_lease_exit', () => HttpResponse.json(stillStreaming), { once: true }));
+    renderApp('/c/conv_lease_exit');
+    expect(await screen.findByText('Thinking…')).toBeInTheDocument();
+    expect((await screen.findAllByText(/early termination option/i, {}, { timeout: 4000 })).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Thinking…')).not.toBeInTheDocument();
   });
 });

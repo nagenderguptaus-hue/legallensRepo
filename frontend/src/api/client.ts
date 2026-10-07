@@ -17,6 +17,9 @@ export class ApiError extends Error {
 
 const GENERIC_MESSAGE = 'The Legal Lens service hit an unexpected problem. Please try again.';
 
+/** What a proxy (Vite in dev, nginx in Docker) answers when the backend behind it is down. */
+const GATEWAY_STATUSES = new Set([502, 503, 504]);
+
 export async function toApiError(res: Response): Promise<ApiError> {
   try {
     const body = (await res.json()) as Partial<ApiErrorBody>;
@@ -30,6 +33,7 @@ export async function toApiError(res: Response): Promise<ApiError> {
   } catch {
     // not JSON
   }
+  if (GATEWAY_STATUSES.has(res.status)) return networkError();
   return new ApiError({ code: 'http_error', message: GENERIC_MESSAGE, request_id: 'unknown' }, res.status);
 }
 
@@ -42,6 +46,11 @@ export function networkError(): ApiError {
     },
     0,
   );
+}
+
+/** True when the backend could not be reached at all (as opposed to answering with an error). */
+export function isServiceUnreachable(err: unknown): boolean {
+  return err instanceof ApiError && err.code === 'network_error';
 }
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {

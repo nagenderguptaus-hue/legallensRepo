@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { ArrowUp, Paperclip, Square } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { isServiceUnreachable } from '@/api/client';
 import type { ConversationDetail } from '@/api/types';
 import { IconButton } from '@/components/ui/Button';
 import { useSendMessage } from '@/features/chat/useSendMessage';
@@ -69,7 +70,9 @@ export function Composer({ conversationId, conversation, variant }: ComposerProp
   };
 
   const placeholder = offline
-    ? 'The local model is unavailable, so messages can’t be sent right now'
+    ? isServiceUnreachable(health.error)
+      ? 'The Legal Lens service isn’t running, so messages can’t be sent right now'
+      : 'The local model is unavailable, so messages can’t be sent right now'
     : documentId
       ? 'Ask a question, request a summary, or draft a memo…'
       : 'Draft a memo, or choose a document to ask about…';

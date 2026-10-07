@@ -1,87 +1,155 @@
-"""Loads demo data into a running backend: a synthetic NDA (PDF) and a short lease (DOCX),
-plus one conversation with an answered question. Synthetic content only, never client data.
+"""Loads the class demo data into a running backend, through the public API only (so it works
+against any deployment: uv, Docker, another port). Synthetic content only, never client data.
 
-    uv run legallens-api                 # in one terminal
-    uv run python scripts/seed_demo.py   # in another  (--url to target another host/port)
+Mirrors the frontend mock's story: a lease and an NDA that are Ready, a scan that Failed, and
+conversations covering ask (with a follow-up), not found, summary, draft memo, clarify and a
+deleted source document.
+
+    uv run legallens-api                          # in one terminal
+    uv run python scripts/seed_demo.py            # in another
+    uv run python scripts/seed_demo.py --fresh    # wipe everything first (loopback only)
+    uv run python scripts/seed_demo.py --url http://127.0.0.1:8010
 """
 
 import argparse
 import sys
 import time
 from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from tests.factories import make_docx, make_pdf  # dev-only script: reuses the test documents
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from demo_documents import PDF, DemoFile, lease, nda, scanned
 
-LEASE_PAGES = [
-    [
-        "COMMERCIAL LEASE AGREEMENT",
-        "This Lease is made on January 15, 2026 between Harbor Properties LLC (Landlord) and "
-        "Maple Street Bakery Inc. (Tenant).",
-        "1. Premises",
-        "Landlord leases to Tenant the ground-floor unit at 12 Harbor Way.",
-    ],
-    [
-        "2. Rent",
-        "Tenant shall pay monthly rent of $4,500 on the first day of each month.",
-        "3. Term",
-        "The term of this Lease is five (5) years from the Commencement Date.",
-    ],
-    [
-        "4. Default",
-        "If Tenant fails to pay rent within ten (10) days after it is due, Landlord may "
-        "terminate this Lease.",
-        "5. Indemnification",
-        "Tenant shall indemnify Landlord against claims arising from Tenant's use of the Premises.",
-    ],
-]
+from tests.factories import make_pdf
+
+LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+Json = dict[str, Any]
+
+# Uploaded, used in one conversation, then deleted: shows the "source deleted" notice (FR-21).
+RETIRED = DemoFile(
+    "Old_Engagement_Letter.pdf",
+    make_pdf(
+        [
+            [
+                "ENGAGEMENT LETTER",
+                "This letter confirms that Lake & Hill LLP will represent Maple Street Bakery Inc. "
+                "in its lease negotiation with Harbor Properties LLC.",
+                "1. Fees",
+                "Our hourly rate for this engagement is $350, billed monthly.",
+            ]
+        ]
+    ),
+    PDF,
+)
+
+
+def upload(client: httpx.Client, file: DemoFile) -> Json:
+    res = client.post("/api/documents", files={"file": (file.name, file.content, file.mime)})
+    if res.status_code == 409 and res.json()["code"] == "duplicate_document":
+        existing: Json = next(
+            d for d in client.get("/api/documents").json() if d["name"] == file.name
+        )
+        print(f"  {file.name}: already in the library")
+        return existing
+    res.raise_for_status()
+    print(f"  {file.name}: uploaded")
+    created: Json = res.json()
+    return created
+
+
+def wait_until_processed(client: httpx.Client, doc: Json, timeout_s: float = 120) -> Json:
+    deadline = time.monotonic() + timeout_s
+    while doc["status"] == "processing":
+        if time.monotonic() > deadline:
+            sys.exit(f"{doc['name']} is still processing after {timeout_s:.0f}s")
+        time.sleep(0.5)
+        doc = client.get(f"/api/documents/{doc['id']}").json()
+    print(f"  {doc['name']}: {doc['status']}")
+    return doc
+
+
+def ask(client: httpx.Client, conversation_id: str, message: str, doc: Json | None) -> None:
+    body = {
+        "conversation_id": conversation_id,
+        "message": message,
+        "document_ids": [doc["id"]] if doc else [],
+    }
+    with client.stream("POST", "/api/chat/stream", json=body) as stream:
+        stream.raise_for_status()
+        for _ in stream.iter_bytes():
+            pass
+
+
+def conversation(client: httpx.Client, title: str, doc: Json | None, messages: list[str]) -> str:
+    conv = client.post("/api/conversations", json={}).json()
+    for message in messages:
+        ask(client, conv["id"], message, doc)
+    client.patch(f"/api/conversations/{conv['id']}", json={"title": title}).raise_for_status()
+    print(f"  {title}")
+    return str(conv["id"])
+
+
+def wipe(client: httpx.Client, base: str) -> None:
+    if urlparse(base).hostname not in LOOPBACK:
+        sys.exit("--fresh deletes everything; it only runs against a loopback address.")
+    for conv in client.get("/api/conversations").json():
+        client.delete(f"/api/conversations/{conv['id']}").raise_for_status()
+    for doc in client.get("/api/documents").json():
+        client.delete(f"/api/documents/{doc['id']}").raise_for_status()
+    print("Wiped all conversations and documents.")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--url", default="http://127.0.0.1:8000")
-    base = parser.parse_args().url.rstrip("/")
+    parser.add_argument("--fresh", action="store_true", help="delete all data first")
+    args = parser.parse_args()
+    base = args.url.rstrip("/")
 
-    with httpx.Client(base_url=base, timeout=60) as client:
+    with httpx.Client(base_url=base, timeout=120) as client:
         client.get("/api/health").raise_for_status()
-        ids = []
-        for name, content, mime in [
-            ("Mutual_NDA.pdf", make_pdf(), "application/pdf"),
-            (
-                "Commercial_Lease.docx",
-                make_docx(LEASE_PAGES),
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ),
-        ]:
-            res = client.post("/api/documents", files={"file": (name, content, mime)})
-            if res.status_code == 409:
-                print(f"skip {name}: {res.json()['message']}")
-                continue
-            res.raise_for_status()
-            ids.append(res.json()["id"])
-            print(f"uploaded {name} -> {ids[-1]}")
+        if args.fresh:
+            wipe(client, base)
 
-        for doc_id in ids:
-            for _ in range(60):
-                status = client.get(f"/api/documents/{doc_id}").json()["status"]
-                if status != "processing":
-                    print(f"{doc_id}: {status}")
-                    break
-                time.sleep(0.5)
+        print("Documents:")
+        docs = [upload(client, f) for f in (scanned(), RETIRED, nda(), lease())]
+        the_scan, retired, the_nda, the_lease = (wait_until_processed(client, d) for d in docs)
+        del the_scan  # stays Failed on purpose: shows Retry / Delete
 
-        if ids:
-            conversation = client.post("/api/conversations", json={}).json()
-            body = {
-                "conversation_id": conversation["id"],
-                "message": "How long does the agreement remain in effect?",
-                "document_ids": [ids[0]],
-            }
-            with client.stream("POST", "/api/chat/stream", json=body) as stream:
-                for _ in stream.iter_bytes():
-                    pass
-            print(f"conversation {conversation['id']} created with one answered question")
+        if client.get("/api/conversations").json():
+            print("Conversations already exist; skipped them (use --fresh to start over).")
+            return
+
+        # Oldest first, so the newest lands at the top of the sidebar.
+        print("Conversations:")
+        conversation(
+            client,
+            "Engagement letter: fees",
+            retired,
+            ["What is the hourly rate for this engagement?"],
+        )
+        client.delete(f"/api/documents/{retired['id']}").raise_for_status()
+        conversation(client, "NDA: what can I help with?", the_nda, ["nda"])
+        conversation(client, "NDA summary", the_nda, ["Summarize this NDA"])
+        conversation(
+            client, "Memo: tenant exit options", the_lease, ["Draft a memo on my exit options"]
+        )
+        conversation(
+            client,
+            "Lease: early termination rights",
+            the_lease,
+            [
+                "Can the tenant terminate the lease early?",
+                "How much written notice does that require?",
+                "Does the lease include a non-compete clause?",
+            ],
+        )
+    print("Done. Open the app and pick a conversation from the sidebar.")
 
 
 if __name__ == "__main__":

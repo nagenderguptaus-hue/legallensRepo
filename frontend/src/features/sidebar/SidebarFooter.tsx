@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { FlaskConical, Keyboard, ShieldCheck } from 'lucide-react';
+import { isServiceUnreachable } from '@/api/client';
 import { IconButton } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useHealth } from '@/hooks/queries';
@@ -11,12 +12,17 @@ const STATUS_TEXT = {
   ready: 'Local model ready',
   loading: 'Local model starting…',
   unavailable: 'Local model unavailable',
+  offline: 'Service not reachable',
   unknown: 'Checking local model…',
 } as const;
 
 export function SidebarFooter() {
-  const { data, isError } = useHealth();
-  const status = isError ? 'unavailable' : (data?.modelRuntime ?? 'unknown');
+  const { data, error, isError } = useHealth();
+  const status = isError
+    ? isServiceUnreachable(error)
+      ? 'offline'
+      : 'unavailable'
+    : (data?.modelRuntime ?? 'unknown');
   const setShortcutsOpen = useUiStore((s) => s.setShortcutsOpen);
   const setDemoControlsOpen = useUiStore((s) => s.setDemoControlsOpen);
 
@@ -27,13 +33,15 @@ export function SidebarFooter() {
         content={
           status === 'ready'
             ? `${data?.model}. Runs on this computer.`
-            : status === 'unavailable'
-              ? 'Start the local model runtime to send messages.'
+            : status === 'offline'
+              ? 'Start the Legal Lens backend on this computer. This page reconnects by itself.'
+              : status === 'unavailable'
+                ? 'Start the local model runtime to send messages.'
               : 'Connecting to the local model runtime.'
         }
       >
         <div className={styles.status} tabIndex={0} role="status">
-          <span className={clsx(styles.dot, styles[status])} aria-hidden />
+          <span className={clsx(styles.dot, styles[status === 'offline' ? 'unavailable' : status])} aria-hidden />
           {STATUS_TEXT[status]}
         </div>
       </Tooltip>

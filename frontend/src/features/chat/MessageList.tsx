@@ -19,7 +19,8 @@ export function MessageList({ conversation, pending, onSend }: MessageListProps)
   const pendingIds = pending ? [pending.user.id, pending.assistant.id] : [];
   const messages = conversation.messages.filter((m) => !pendingIds.includes(m.id));
   const all: { message: Message; live: boolean }[] = [
-    ...messages.map((message) => ({ message, live: false })),
+    // `streaming` from the server = still generating elsewhere; useConversation polls it.
+    ...messages.map((message) => ({ message, live: message.status === 'streaming' })),
     ...(pending
       ? [
           { message: pending.user, live: false },

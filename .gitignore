@@ -8,6 +8,8 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+# Vite mode file for "real backend" mode: a flag and a localhost URL, no secrets.
+!frontend/.env.backend
 
 # Local data: uploaded documents, SQLite DB (never commit client data)
 data/

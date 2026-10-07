@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { ApiError } from '@/api/client';
 import { conversationsApi } from '@/api/conversations';
 import { documentsApi, healthApi } from '@/api/documents';
 import type { Conversation, ConversationDetail, LegalDocument } from '@/api/types';
+import { useChatStore } from '@/store/chatStore';
 
 export const keys = {
   conversations: ['conversations'] as const,
@@ -33,6 +35,13 @@ export function useConversation(id: string | undefined) {
     queryFn: () => conversationsApi.get(id!),
     enabled: Boolean(id),
     retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
+    // A reply still generating on the server with no stream in this tab (another tab, a reload
+    // mid-answer, a Stop the server hasn't processed yet): poll until it settles.
+    refetchInterval: (query) =>
+      query.state.data?.messages.some((m) => m.status === 'streaming') &&
+      !useChatStore.getState().pending[id ?? '']
+        ? 1000
+        : false,
   });
 }
 
@@ -152,4 +161,20 @@ export function useHealth() {
     refetchInterval: (query) => (query.state.data?.modelRuntime === 'ready' ? 15_000 : 4_000),
     retry: false,
   });
+}
+
+/** When the service comes back after an outage, refetch every query that failed meanwhile. */
+export function useRefetchAfterOutage() {
+  const qc = useQueryClient();
+  const { isError, isSuccess } = useHealth();
+  const wasDown = useRef(false);
+
+  useEffect(() => {
+    if (isError) {
+      wasDown.current = true;
+    } else if (isSuccess && wasDown.current) {
+      wasDown.current = false;
+      void qc.refetchQueries({ predicate: (q) => q.state.status === 'error' });
+    }
+  }, [isError, isSuccess, qc]);
 }

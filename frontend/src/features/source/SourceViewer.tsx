@@ -6,6 +6,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Notice } from '@/components/ui/Notice';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDocumentPage } from '@/hooks/queries';
+import { findQuote } from '@/lib/quote';
 import { useUiStore, type SourceTarget } from '@/store/uiStore';
 import styles from './SourceViewer.module.css';
 
@@ -108,15 +109,16 @@ function Highlighted({
   quote: string | null;
   markRef: RefObject<HTMLElement | null>;
 }) {
-  const at = quote ? text.indexOf(quote) : -1;
-  if (!quote || at === -1) return text;
+  const range = findQuote(text, quote);
+  if (!range) return text;
+  const [start, end] = range;
   return (
     <>
-      {text.slice(0, at)}
+      {text.slice(0, start)}
       <mark ref={markRef} className={styles.mark}>
-        {quote}
+        {text.slice(start, end)}
       </mark>
-      {text.slice(at + quote.length)}
+      {text.slice(end)}
     </>
   );
 }

@@ -6,6 +6,7 @@ import { GlobalDropOverlay } from '@/features/documents/GlobalDropOverlay';
 import { Sidebar } from '@/features/sidebar/Sidebar';
 import { DemoControlsDialog } from '@/features/system/DemoControlsDialog';
 import { ShortcutsDialog } from '@/features/system/ShortcutsDialog';
+import { useRefetchAfterOutage } from '@/hooks/queries';
 import { USE_MOCKS } from '@/lib/env';
 import { isTyping } from '@/lib/platform';
 import { useUiStore } from '@/store/uiStore';
@@ -18,6 +19,7 @@ export function AppShell() {
   const announcement = useUiStore((s) => s.announcement);
   const location = useLocation();
   useGlobalShortcuts();
+  useRefetchAfterOutage();
 
   // On screens where the panel would cover the chat, start with it closed.
   useEffect(() => {

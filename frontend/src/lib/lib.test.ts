@@ -3,6 +3,7 @@ import { dateGroup, groupByDate } from './dates';
 import { formatBytes, validateFile } from './files';
 import { docLabel } from './format';
 import { countPlaceholders, prepareMarkdown, toPlainText } from './markdown';
+import { findQuote } from './quote';
 
 describe('prepareMarkdown', () => {
   it('turns citation markers into cite links', () => {
@@ -74,5 +75,28 @@ describe('files', () => {
     expect(formatBytes(86_500)).toBe('84 KB');
     expect(formatBytes(1_284_000)).toBe('1.2 MB');
     expect(docLabel('Commercial_Lease_Agreement.pdf')).toBe('Commercial Lease Agreement');
+  });
+});
+
+describe('findQuote', () => {
+  const page = 'Tenant shall indemnify Landlord against all claims arising from use of the Premises.';
+  const highlighted = (quote: string | null) => {
+    const range = findQuote(page, quote);
+    return range && page.slice(...range);
+  };
+
+  it('finds a verbatim quote', () => {
+    expect(highlighted('indemnify Landlord')).toBe('indemnify Landlord');
+  });
+
+  it('finds a quote the backend shortened with an ellipsis', () => {
+    expect(highlighted('Tenant shall indemnify Landlord against all…')).toBe('Tenant shall indemnify Landlord against all');
+    expect(highlighted('… arising from use of the Premises.')).toBe('arising from use of the Premises.');
+  });
+
+  it('returns null when the text is not on the page', () => {
+    expect(highlighted('Landlord shall indemnify Tenant')).toBeNull();
+    expect(highlighted('…')).toBeNull();
+    expect(highlighted(null)).toBeNull();
   });
 });

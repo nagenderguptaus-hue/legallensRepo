@@ -8,8 +8,8 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: 'http://localhost:4173',
-    // Uses the locally installed Microsoft Edge, so no browser download is needed.
-    channel: 'msedge',
+    // Local default: the installed Microsoft Edge (no download). CI sets PW_CHANNEL=chromium.
+    channel: process.env.PW_CHANNEL ?? 'msedge',
     viewport: { width: 1440, height: 900 },
     trace: 'retain-on-failure',
   },
