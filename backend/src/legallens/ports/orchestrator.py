@@ -20,6 +20,9 @@ from legallens.ports.ingestion import PageText
 Intent = Literal["ask", "summary", "draft", "clarify"]
 Outcome = Literal["answered", "not_found", "clarify", "needs_document"]
 RuntimeStatus = Literal["ready", "loading", "unavailable"]
+# Where the model runs: "local" (on this machine) or "cloud" (a hosted API such as Claude).
+# The UI's privacy wording depends on it.
+Processing = Literal["local", "cloud"]
 
 
 @dataclass(frozen=True)
@@ -96,26 +99,33 @@ OrchestratorEvent = IntentEvent | StatusEvent | TokenEvent | CitationEvent | Don
 class RuntimeHealth:
     status: RuntimeStatus
     model: str
+    processing: Processing = "local"
 
 
 # ---------------------------------------------------------------- errors
 
 
 class OrchestratorError(Exception):
-    """A failure the user should see, with a stable code (e.g. ``stream_interrupted``)."""
+    """A failure the user should see, with a stable code (e.g. ``stream_interrupted``).
 
-    def __init__(self, code: str, message: str) -> None:
+    ``status`` is the HTTP status used when it happens before the reply starts streaming
+    (afterwards it becomes an ``error`` event): 502 by default, 409 for a document that is
+    not ready for the model yet, and so on."""
+
+    def __init__(self, code: str, message: str, *, status: int = 502) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.status = status
 
 
 class ModelUnavailableError(OrchestratorError):
     def __init__(
         self,
-        message: str = "The local model runtime is not responding. Start it and try again.",
+        message: str = "The AI model is not responding. Check that it is running and "
+        "reachable, then try again.",
     ) -> None:
-        super().__init__("model_unavailable", message)
+        super().__init__("model_unavailable", message, status=503)
 
 
 class ChatOrchestrator(Protocol):

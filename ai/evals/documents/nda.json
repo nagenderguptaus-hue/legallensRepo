@@ -1,0 +1,39 @@
+{
+  "id": "doc_nda",
+  "name": "Mutual_NDA.docx",
+  "type": "docx",
+  "source": "backend/scripts/demo_documents.py via BasicIngestionPipeline",
+  "pages": [
+    {
+      "page": 1,
+      "section": "MUTUAL NON-DISCLOSURE AGREEMENT",
+      "paragraphs": [
+        "MUTUAL NON-DISCLOSURE AGREEMENT",
+        "This Mutual Non-Disclosure Agreement is entered into on March 1, 2025 by and between Acme Corp and Beta LLC.",
+        "1. Definitions",
+        "Confidential Information means any non-public information disclosed by either party."
+      ]
+    },
+    {
+      "page": 2,
+      "section": "2. Term",
+      "paragraphs": [
+        "2. Term",
+        "This Agreement shall remain in effect for a period of three (3) years from the Effective Date.",
+        "3. Obligations",
+        "The Receiving Party shall protect Confidential Information with reasonable care."
+      ]
+    },
+    {
+      "page": 3,
+      "section": "4. Termination",
+      "paragraphs": [
+        "4. Termination",
+        "Either party may terminate this Agreement with thirty (30) days written notice.",
+        "The Receiving Party shall be liable for any breach of this Agreement.",
+        "5. Governing Law",
+        "This Agreement is governed by the laws of the State of California."
+      ]
+    }
+  ]
+}

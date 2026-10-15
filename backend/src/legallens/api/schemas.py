@@ -40,6 +40,9 @@ class Health(CamelModel):
     status: Literal["ok", "degraded"]
     model_runtime: Literal["ready", "loading", "unavailable"]
     model: str
+    # "cloud": answers come from a hosted model (Claude), so messages and document passages
+    # leave this machine. The UI words its privacy note accordingly.
+    processing: Literal["local", "cloud"]
 
 
 # ---------------------------------------------------------------- documents

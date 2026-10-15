@@ -44,13 +44,16 @@ class Settings(BaseSettings):
     history_turns: int = Field(default=10, ge=0)
 
     # ---- ingestion (NFR-8)
-    ingestion_timeout_s: float = Field(default=600, gt=0)
+    # 300 scanned pages at ~2 s/page of OCR, plus embedding (ai/ingestion.todo.md I16).
+    ingestion_timeout_s: float = Field(default=1800, gt=0)
     ingestion_max_retries: int = Field(default=2, ge=0)
     ingestion_retry_backoff_s: float = Field(default=1.0, ge=0)
 
     # ---- chat stream
-    stream_first_event_timeout_s: float = Field(default=30, gt=0)
-    stream_total_timeout_s: float = Field(default=300, gt=0)
+    # The first event is the intent: the AI router takes 15 s x up to 3 attempts at worst.
+    stream_first_event_timeout_s: float = Field(default=45, gt=0)
+    # An Opus summary of a long document can take 300 s; first use also loads search models.
+    stream_total_timeout_s: float = Field(default=600, gt=0)
     sse_ping_interval_s: float = Field(default=15, gt=0)
 
     # ---- AI layer adapters (NFR-7): "standin" or "package.module:factory"

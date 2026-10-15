@@ -4,11 +4,13 @@ on:
   push:
     paths:
       - "backend/**"
+      - "ai/**" # the optional AI ingestion adapter and its tests
       - "frontend/src/api/types.ts" # the contract tests read it
       - ".github/workflows/backend.yml"
   pull_request:
     paths:
       - "backend/**"
+      - "ai/**"
       - "frontend/src/api/types.ts"
       - ".github/workflows/backend.yml"
 
@@ -34,19 +36,42 @@ jobs:
         with:
           version: "0.12.23"
           enable-cache: true
-      - run: uv sync --locked
+      # With the AI extra, so the AI ingestion adapter is type-checked and its tests run
+      # (real OCR on a synthetic scan; no model downloads).
+      - run: uv sync --locked --extra ai
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run mypy
       - run: uv run pytest --cov --cov-report=term --cov-fail-under=85
 
   docker:
-    name: docker image smoke test
+    name: docker image smoke test (extras "${{ matrix.extras }}", chat ${{ matrix.chat }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - extras: ""
+            chat: standin
+            orchestrator: standin
+            ingestion: standin
+          - extras: ai # the AI ingestion adapter must import and start inside the image
+            chat: standin
+            orchestrator: standin
+            ingestion: legallens.adapters.ai_ingestion:create
+          # AI chat too. No API key in CI: health still answers (modelRuntime "unavailable").
+          - extras: ai
+            chat: ai
+            orchestrator: legallens.adapters.ai:create_orchestrator
+            ingestion: legallens.adapters.ai:create_ingestion
     steps:
       - uses: actions/checkout@v5
-      - run: docker build -t legallens-backend .
-      - run: docker run -d --name legallens -p 127.0.0.1:8000:8000 legallens-backend
+      # The job runs in backend/; the build context is the repository root.
+      - run: docker build -f Dockerfile --build-arg LL_EXTRAS=${{ matrix.extras }} -t legallens-backend ..
+      - run: >
+          docker run -d --name legallens -p 127.0.0.1:8000:8000
+          -e LL_INGESTION=${{ matrix.ingestion }} -e LL_ORCHESTRATOR=${{ matrix.orchestrator }}
+          legallens-backend
       - name: wait for /api/health
         run: |
           for i in $(seq 1 30); do

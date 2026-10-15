@@ -1,0 +1,42 @@
+name: ai
+
+on:
+  push:
+    paths:
+      - "ai/**"
+      - ".github/workflows/ai.yml"
+  pull_request:
+    paths:
+      - "ai/**"
+      - ".github/workflows/ai.yml"
+
+concurrency:
+  group: ai-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ai
+
+jobs:
+  checks:
+    name: lint · types · tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      # Offline: fake Claude models, embedder and reranker; no API key, no model downloads.
+      # `live` tests (real Anthropic API) are deselected by default; `ocr` tests run the
+      # bundled RapidOCR models locally.
+      - run: uv run pytest

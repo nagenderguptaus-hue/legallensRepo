@@ -131,8 +131,16 @@ export type ChatEvent =
 
 export type ModelRuntimeStatus = 'ready' | 'loading' | 'unavailable';
 
+/**
+ * Where answers are generated. `local`: on this computer, nothing leaves it. `cloud`: a hosted
+ * model (Claude): messages and document passages are sent to its API. Documents, the index and
+ * chat history stay on this computer either way.
+ */
+export type Processing = 'local' | 'cloud';
+
 export interface Health {
   status: 'ok' | 'degraded';
   modelRuntime: ModelRuntimeStatus;
   model: string;
+  processing: Processing;
 }

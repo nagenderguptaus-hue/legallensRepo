@@ -72,7 +72,7 @@ export function Composer({ conversationId, conversation, variant }: ComposerProp
   const placeholder = offline
     ? isServiceUnreachable(health.error)
       ? 'The Legal Lens service isn’t running, so messages can’t be sent right now'
-      : 'The local model is unavailable, so messages can’t be sent right now'
+      : 'The AI model is unavailable, so messages can’t be sent right now'
     : documentId
       ? 'Ask a question, request a summary, or draft a memo…'
       : 'Draft a memo, or choose a document to ask about…';

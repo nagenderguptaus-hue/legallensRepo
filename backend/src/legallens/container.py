@@ -34,6 +34,10 @@ class Container:
 
     async def shutdown(self) -> None:
         await self.runner.stop()
+        # Adapters holding resources (the AI pipeline's vector store) may expose aclose().
+        close = getattr(self.pipeline, "aclose", None)
+        if close is not None:
+            await close()
         await self.db.dispose()
         log.info("shutdown_complete")
 

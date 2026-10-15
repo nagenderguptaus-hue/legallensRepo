@@ -17,7 +17,7 @@ Client documents never leave the machine. Built as a class demonstration project
 |---|---|---|
 | [frontend/](frontend/) | React 19 + Vite + TypeScript UI. It can run on its own against an in-browser mock API. | ✅ [plan](frontend/TODO.md) |
 | [backend/](backend/) | FastAPI service: uploads and ingestion, conversation history (SQLite), streamed chat (SSE) | ✅ [plan](backend/TODO.md) |
-| AI layer | LLM, retrieval (RAG), OCR. Plugs into the backend's two interfaces. Until then the backend runs on rule-based **stand-ins** that quote the document directly. | ⏳ BRD phase 3 |
+| [ai/](ai/) | AI layer. Done so far: the orchestrator's intent router (Claude Haiku 4.5 via LangChain), standalone and not yet wired in. Still to come: retrieval (RAG), the Ask/Summary/Draft workflows, OCR. Until then the backend runs on rule-based **stand-ins** that quote the document directly. | 🚧 [plan](ai/TODO.md) |
 | [compose.yaml](compose.yaml) | The whole app in Docker: nginx (UI + `/api` proxy) in front of the backend | ✅ [integration plan](integration.todo.md) |
 
 ## Running it

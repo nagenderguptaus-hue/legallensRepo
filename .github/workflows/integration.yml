@@ -7,12 +7,14 @@ on:
     paths:
       - "frontend/**"
       - "backend/**"
+      - "ai/pyproject.toml" # the backend's lock file refers to it
       - "compose.yaml"
       - ".github/workflows/integration.yml"
   pull_request:
     paths:
       - "frontend/**"
       - "backend/**"
+      - "ai/pyproject.toml" # the backend's lock file refers to it
       - "compose.yaml"
       - ".github/workflows/integration.yml"
 

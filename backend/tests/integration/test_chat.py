@@ -203,7 +203,7 @@ async def test_model_offline_returns_503_and_saves_nothing(run_app: RunApp) -> N
         conversation = await r.new_conversation()
         res = await r.chat(conversation["id"], "What is the term?")
         assert (res.status_code, res.json()["code"]) == (503, "model_unavailable")
-        assert "model runtime" in res.json()["message"]
+        assert "not responding" in res.json()["message"]
         detail = (await r.client.get(f"/api/conversations/{conversation['id']}")).json()
         assert detail["messages"] == []
         assert detail["title"] == "New conversation"

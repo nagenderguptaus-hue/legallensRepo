@@ -2,7 +2,13 @@
 #   docker compose up --build
 services:
   backend:
-    build: .
+    build:
+      context: .. # the AI layer (../ai) is a path dependency
+      dockerfile: backend/Dockerfile
+      args:
+        # "ai" adds the AI layer; switch it on in .env (LL_INGESTION, LL_ORCHESTRATOR,
+        # ANTHROPIC_API_KEY: see .env.example).
+        LL_EXTRAS: ${LL_EXTRAS:-}
     image: legallens-backend:local
     ports:
       - "127.0.0.1:8000:8000" # loopback only: never reachable from the network (NFR-5)

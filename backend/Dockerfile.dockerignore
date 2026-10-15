@@ -1,0 +1,11 @@
+# Used for builds of backend/Dockerfile (context: the repository root). Allow-list: only the
+# files the image needs, so documents, databases, models, venvs and .env files never ship.
+*
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/README.md
+!backend/src
+!ai/pyproject.toml
+!ai/README.md
+!ai/src
+**/__pycache__

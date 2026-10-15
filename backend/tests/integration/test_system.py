@@ -11,6 +11,7 @@ async def test_health_ok(r: Running) -> None:
         "status": "ok",
         "modelRuntime": "ready",
         "model": "Stand-in (no AI) · rule-based",
+        "processing": "local",
     }
 
 

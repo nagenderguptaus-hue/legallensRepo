@@ -1163,13 +1163,22 @@
           "model": {
             "type": "string",
             "title": "Model"
+          },
+          "processing": {
+            "type": "string",
+            "enum": [
+              "local",
+              "cloud"
+            ],
+            "title": "Processing"
           }
         },
         "type": "object",
         "required": [
           "status",
           "modelRuntime",
-          "model"
+          "model",
+          "processing"
         ],
         "title": "Health"
       },

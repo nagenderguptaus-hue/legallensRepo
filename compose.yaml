@@ -6,7 +6,15 @@ name: legallens
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        # LL_EXTRAS=ai docker compose up --build  → image with the AI layer. Then, in
+        # backend/.env: LL_INGESTION=legallens.adapters.ai:create_ingestion (OCR, index) and,
+        # for Claude chat, LL_ORCHESTRATOR=legallens.adapters.ai:create_orchestrator plus
+        # ANTHROPIC_API_KEY=... (ai/.env is not part of the image). See backend/.env.example.
+        LL_EXTRAS: ${LL_EXTRAS:-}
     image: legallens-backend:local
     expose:
       - "8000"

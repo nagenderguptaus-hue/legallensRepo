@@ -40,7 +40,7 @@ test('with an empty library, a question gets a friendly "needs a document" reply
 
 test('BRD demo path against the real backend', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Local model ready')).toBeVisible();
+  await expect(page.getByText('AI model ready')).toBeVisible();
 
   // 1. Upload a real PDF; ingestion runs on the backend and the card turns Ready.
   await page.locator('input[type=file]').setInputFiles(fixture(LEASE));

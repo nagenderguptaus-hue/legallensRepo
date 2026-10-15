@@ -52,10 +52,10 @@ describe('chat', () => {
     expect(await screen.findByRole('article', { name: /Draft legal memo/i })).toBeInTheDocument();
   });
 
-  it('blocks sending and explains why when the local model is offline', async () => {
+  it('blocks sending and explains why when the AI model is offline', async () => {
     updateSettings({ modelOffline: true });
     renderApp('/');
-    expect(await screen.findByText('The local model is unavailable.')).toBeInTheDocument();
+    expect(await screen.findByText('The AI model is unavailable.')).toBeInTheDocument();
     expect(screen.getByLabelText('Message Legal Lens')).toBeDisabled();
   });
 });

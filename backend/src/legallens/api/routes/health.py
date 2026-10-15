@@ -26,4 +26,5 @@ async def health(c: ContainerDep) -> Health:
         status="ok" if healthy else "degraded",
         model_runtime=runtime.status,
         model=runtime.model,
+        processing=runtime.processing,
     )

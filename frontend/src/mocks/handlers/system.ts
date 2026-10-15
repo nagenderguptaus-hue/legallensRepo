@@ -11,6 +11,7 @@ export const systemHandlers = [
       status: offline ? 'degraded' : 'ok',
       modelRuntime: offline ? 'unavailable' : 'ready',
       model: 'Local LLM · 8B instruct (mock)',
+      processing: 'local',
     };
     return HttpResponse.json(health);
   }),

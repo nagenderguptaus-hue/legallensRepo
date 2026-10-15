@@ -18,12 +18,24 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
 ]
 
+[project.optional-dependencies]
+# The AI layer (ai/): OCR, chunking, embeddings, vector index. `uv sync --extra ai`, then set
+# LL_INGESTION=legallens.adapters.ai_ingestion:create.
+ai = ["legallens-ai"]
+
 [project.scripts]
 legallens-api = "legallens.main:run"
 
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv]
+# OneDrive folders can't hold hardlinks, so uv copies packages into .venv instead.
+link-mode = "copy"
+
+[tool.uv.sources]
+legallens-ai = { path = "../ai", editable = true }
 
 [dependency-groups]
 dev = [
@@ -72,7 +84,9 @@ disallow_untyped_defs = false
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "-ra --strict-markers"
+# Live tests call the real Anthropic API (cost, network, model downloads): `pytest -m live`.
+markers = ["live: calls the real Anthropic API and loads the search models"]
+addopts = "-ra --strict-markers -m 'not live'"
 filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
 
 [tool.coverage.run]

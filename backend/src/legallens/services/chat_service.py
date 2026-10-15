@@ -13,7 +13,7 @@ Flow of one turn:
 import asyncio
 import json
 import time
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
 from datetime import timedelta
 from typing import Any
 
@@ -49,7 +49,6 @@ from legallens.ports.orchestrator import (
     DocumentRef,
     DoneEvent,
     IntentEvent,
-    ModelUnavailableError,
     OrchestratorError,
     OrchestratorEvent,
     StatusEvent,
@@ -266,14 +265,12 @@ class ChatService:
         try:
             async with asyncio.timeout(self._settings.stream_first_event_timeout_s):
                 first = await anext(events)
-        except ModelUnavailableError as exc:
-            raise AppError(503, exc.code, exc.message) from exc
         except TimeoutError as exc:
             raise AppError(
-                504, "model_timeout", "The local model took too long to respond. Try again."
+                504, "model_timeout", "The AI model took too long to respond. Try again."
             ) from exc
-        except OrchestratorError as exc:
-            raise AppError(502, exc.code, exc.message) from exc
+        except OrchestratorError as exc:  # ModelUnavailableError included (503)
+            raise AppError(exc.status, exc.code, exc.message) from exc
         except StopAsyncIteration as exc:
             raise AppError(502, "empty_response", "The model returned no answer.") from exc
         if not isinstance(first, IntentEvent):
@@ -348,6 +345,7 @@ class ChatService:
         status: str,
         content: str,
         citations: Sequence[Citation],
+        chunk_ids: Mapping[int, str] | None = None,
         outcome: str | None = None,
         suggestions: Sequence[str] = (),
         error: AppError | None = None,
@@ -374,7 +372,7 @@ class ChatService:
                             page=c.page,
                             section=c.section,
                             quote=c.quote,
-                            chunk_id=None,
+                            chunk_id=(chunk_ids or {}).get(c.index),
                         )
                         for c in citations
                     )
@@ -482,6 +480,7 @@ class ChatStream:
     async def _produce(self, queue: "asyncio.Queue[bytes | None]") -> None:
         content: list[str] = []
         citations: list[Citation] = []
+        chunk_ids: dict[int, str] = {}  # saved with the citation, not sent to the client
         seen: set[int] = set()
         ttft_ms: float | None = None
         last_save = time.monotonic()
@@ -511,6 +510,8 @@ class ChatStream:
                             citation = self._accept(event, seen)
                             if citation is not None:
                                 citations.append(citation)
+                                if event.chunk_id:
+                                    chunk_ids[citation.index] = event.chunk_id
                                 put(encode_sse("citation", citation.model_dump(by_alias=True)))
                         elif isinstance(event, DoneEvent):
                             done = event
@@ -525,6 +526,7 @@ class ChatStream:
                     status="stopped",
                     content="".join(content),
                     citations=citations,
+                    chunk_ids=chunk_ids,
                     ttft_ms=ttft_ms,
                 )
                 raise
@@ -534,6 +536,7 @@ class ChatStream:
                     status="error",
                     content="".join(content),
                     citations=citations,
+                    chunk_ids=chunk_ids,
                     error=error,
                     ttft_ms=ttft_ms,
                 )
@@ -544,6 +547,7 @@ class ChatStream:
                 status="complete",
                 content="".join(content),
                 citations=citations,
+                chunk_ids=chunk_ids,
                 outcome=done.outcome,
                 suggestions=done.suggestions,
                 ttft_ms=ttft_ms,
@@ -589,7 +593,7 @@ class ChatStream:
         if isinstance(exc, TimeoutError):
             return AppError(504, "model_timeout", "The answer took too long and was stopped.")
         if isinstance(exc, OrchestratorError):
-            return AppError(502, exc.code, exc.message)
+            return AppError(exc.status, exc.code, exc.message)
         log.error("chat_stream_failed", error=type(exc).__name__, exc_info=exc)
         return AppError(500, "internal_error", "Something went wrong while writing the answer.")
 
