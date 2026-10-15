@@ -1,0 +1,59 @@
+[
+  {
+    "id": "msa-fu-1",
+    "expected": "answered",
+    "outcome": "answered",
+    "correct": true,
+    "citation_ok": true,
+    "content_ok": true,
+    "retrieved": true,
+    "gated": false,
+    "query": "What is the cure period for insolvency?",
+    "cited_pages": [
+      11
+    ],
+    "best_score": -2.4588890075683594,
+    "answer": "There is no cure period for insolvency. Under Section 11.3, either Party may terminate the Agreement immediately by written notice if the other Party becomes insolvent, makes a general assignment for the benefit of creditors, or becomes the subject of a bankruptcy petition that is not dismissed within sixty (60) days. [1]\n\nThe only time period in that section is the sixty (60) days for dismissal of a bankruptcy petition, which is not a cure period. By contrast, Section 11.1 (Termination for Cause) gives the breaching Party thirty (30) days after written notice to cure a material breach. [2]",
+    "warnings": [],
+    "error": null
+  },
+  {
+    "id": "msa-fu-2",
+    "expected": "answered",
+    "outcome": "answered",
+    "correct": true,
+    "citation_ok": true,
+    "content_ok": true,
+    "retrieved": true,
+    "gated": false,
+    "query": "How much does each extra User cost beyond the 250 Users covered by the subscription fee?",
+    "cited_pages": [
+      15
+    ],
+    "best_score": 3.3401684761047363,
+    "answer": "$600 per additional User per contract year, prorated for partial years. Exhibit B sets the Additional Users fee at $600 per additional User per contract year, prorated for partial years. [1] This applies beyond the up to 250 Users covered by the $180,000 per contract year Subscription Fee [2].",
+    "warnings": [],
+    "error": null
+  },
+  {
+    "id": "msa-fu-3",
+    "expected": "answered",
+    "outcome": "answered",
+    "correct": true,
+    "citation_ok": true,
+    "content_ok": true,
+    "retrieved": true,
+    "gated": false,
+    "query": "What happens to Customer Data when the agreement ends?",
+    "cited_pages": [
+      5,
+      6,
+      7,
+      11
+    ],
+    "best_score": 3.6880550384521484,
+    "answer": "Under Section 6.4, within thirty (30) days after this Agreement ends, Provider shall make Customer Data available for export in a standard machine-readable format and, after that period, shall delete Customer Data from its systems within a further sixty (60) days, except for copies it is required by law to retain. [1]\n\nRelated terms:\n- Section 6.4 survives termination. [2]\n- Confidentiality obligations regarding Customer Data continue for as long as the information is held by the Receiving Party. [3] Customer Data is included in the definition of Confidential Information. [4]\n- Customer owns all rights in Customer Data, and its licence to Provider is solely to provide the Services. [5]\n\nThe document does not say whether Provider must certify the deletion.",
+    "warnings": [],
+    "error": null
+  }
+]

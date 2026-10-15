@@ -1,0 +1,21 @@
+Running 43 cases against claude-haiku-4-5 ...
+
+Accuracy: 43/43 (100%)
+
+Per intent (recall):
+  ask      18/18
+  summary  8/8
+  draft    10/10
+  clarify  7/7
+
+Confusion matrix (rows = expected, columns = predicted):
+                 ask  summary    draft  clarify    error
+  ask             18        0        0        0        0
+  summary          0        8        0        0        0
+  draft            0        0       10        0        0
+  clarify          0        0        0        7        0
+
+Latency: p50 1665 ms, p95 3687 ms
+Tokens: 103,970 in, 1,803 out (~$0.1130 at Haiku 4.5 prices)
+
+Per-case results written to evals\results\intent_run1.json

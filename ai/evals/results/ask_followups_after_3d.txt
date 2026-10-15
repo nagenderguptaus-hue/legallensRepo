@@ -1,0 +1,19 @@
+Running 3 Ask cases (claude-sonnet-5-5, top 8, gate -7.0) ...
+
+Overall correct:            3/3 (100%)
+
+BRD §6 targets:
+  answer correctness ? 80%   3/3 (100%)
+  correct citation   ? 90%   3/3 (100%)
+  'not found' right  ? 90%   n/a
+
+Retrieval recall (expected page in top N): 3/3 (100%)
+Uncited answers (should be 0): 0
+Stopped by the reranker gate: 0
+Rewritten follow-ups: 3
+
+
+Latency (generation): first text p50 839 ms, p95 13215 ms; full answer p50 2605 ms
+Generation tokens: 19,375 in, 685 out. Estimated cost incl. rewrites: ~$0.054
+
+Per-case results written to evals\results\ask_followups_after_3d.json
