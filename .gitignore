@@ -13,3 +13,5 @@ Thumbs.db
 
 # Local data: uploaded documents, SQLite DB (never commit client data)
 data/
+# The frontend's fictional demo fixtures live in a folder called data/ too.
+!frontend/src/mocks/data/
