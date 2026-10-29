@@ -81,10 +81,10 @@ jobs:
           docker run -d --name legallens -p 127.0.0.1:8000:8000
           -e LL_INGESTION=standin -e LL_ORCHESTRATOR=standin
           legallens-backend
-      - name: wait for /api/health/ready
+      - name: wait for /api/health
         run: |
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8000/api/health/ready; then exit 0; fi
+            if curl -fsS http://127.0.0.1:8000/api/health; then exit 0; fi
             sleep 1
           done
           docker logs legallens
