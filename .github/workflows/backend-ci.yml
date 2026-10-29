@@ -1,0 +1,94 @@
+name: backend-ci
+
+# The merge gate for `main`: every pull request into main and every push to main runs these
+# checks. Branch feedback for other branches stays in backend.yml. Keep the job names stable:
+# branch protection requires them.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  quality:
+    name: format · lint · types (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      # With the AI extra, so the AI ingestion adapter is type-checked too.
+      - run: uv sync --locked --extra ai
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+
+  tests:
+    name: tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.23"
+          enable-cache: true
+      - run: uv sync --locked --extra ai
+      # Offline: `live` tests (real Anthropic API) are deselected by the pytest config.
+      # Writes two HTML reports into backend/reports/ (uploaded below) and enforces coverage.
+      - run: >
+          uv run pytest --cov --cov-branch
+          --cov-report=term --cov-report=html:reports/coverage
+          --cov-fail-under=85
+          --html=reports/pytest.html --self-contained-html
+      - name: upload HTML reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-reports-${{ matrix.os }}
+          path: backend/reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+  docker:
+    name: docker image smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      # The job runs in backend/; the build context is the repository root (ai/ is needed).
+      - run: docker build -f Dockerfile -t legallens-backend ..
+      - run: >
+          docker run -d --name legallens -p 127.0.0.1:8000:8000
+          -e LL_INGESTION=standin -e LL_ORCHESTRATOR=standin
+          legallens-backend
+      - name: wait for /api/health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/api/health; then exit 0; fi
+            sleep 1
+          done
+          docker logs legallens
+          exit 1
+      - name: stop the container
+        if: always()
+        run: docker rm -f legallens
