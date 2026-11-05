@@ -14,3 +14,5 @@ Thumbs.db
 
 # Local data: uploaded documents, SQLite DB (never commit client data)
 data/
+# ...except the frontend's mock seed data, which is source code the build needs
+!frontend/src/mocks/data/

@@ -76,6 +76,12 @@ plugins = ["pydantic.mypy"]
 module = ["pypdfium2", "pypdfium2.*", "pytesseract"]
 ignore_missing_imports = true
 
+# Optional dependencies in the "qwen" and "bench" groups above. The CI installs only the default
+# groups, so these imports are missing there. The code runs without them.
+[[tool.mypy.overrides]]
+module = ["torch", "torch.*", "transformers", "transformers.*", "rapidfuzz", "rapidfuzz.*"]
+ignore_missing_imports = true
+
 # ---------------------------------------------------------------- tests
 
 [tool.pytest.ini_options]
