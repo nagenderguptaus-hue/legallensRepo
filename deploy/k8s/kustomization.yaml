@@ -1,0 +1,17 @@
+# Kustomize entry point: `kubectl apply -k deploy/k8s`.
+# cd.yml rewrites the two `images:` entries below to the ACR path and the commit SHA
+# before it applies. The values here are placeholders for a manual apply.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: legallens
+resources:
+  - namespace.yaml
+  - backend.yaml
+  - frontend.yaml
+images:
+  - name: legallens-backend
+    newName: legallens-backend
+    newTag: latest
+  - name: legallens-frontend
+    newName: legallens-frontend
+    newTag: latest

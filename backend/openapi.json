@@ -27,6 +27,58 @@
         }
       }
     },
+    "/api/health/live": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Liveness probe",
+        "operationId": "live_api_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Liveness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health/ready": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Readiness probe: 200 when ready, 503 when not",
+        "operationId": "ready_api_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Not ready to take traffic",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/documents": {
       "get": {
         "tags": [
@@ -1297,6 +1349,21 @@
         ],
         "title": "LegalDocument"
       },
+      "Liveness": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "alive",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "Liveness",
+        "description": "The process is up and serving requests (Kubernetes liveness probe)."
+      },
       "Message": {
         "properties": {
           "id": {
@@ -1437,6 +1504,44 @@
           "total"
         ],
         "title": "Progress"
+      },
+      "Readiness": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ],
+            "title": "Status"
+          },
+          "database": {
+            "type": "boolean",
+            "title": "Database"
+          },
+          "storage": {
+            "type": "boolean",
+            "title": "Storage"
+          },
+          "modelRuntime": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "loading",
+              "unavailable"
+            ],
+            "title": "Modelruntime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "storage",
+          "modelRuntime"
+        ],
+        "title": "Readiness",
+        "description": "Whether this instance can take traffic (Kubernetes readiness probe): HTTP 200 when\n``ready``, 503 when not. A model runtime that is ``unavailable`` (e.g. the hosted model is\ndown) still counts as ready: documents and conversations keep working, and chat reports\nthe outage itself. Only ``loading`` (local models still warming up) is not ready."
       }
     }
   }

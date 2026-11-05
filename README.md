@@ -17,8 +17,9 @@ Client documents never leave the machine. Built as a class demonstration project
 |---|---|---|
 | [frontend/](frontend/) | React 19 + Vite + TypeScript UI. It can run on its own against an in-browser mock API. | ✅ [plan](frontend/TODO.md) |
 | [backend/](backend/) | FastAPI service: uploads and ingestion, conversation history (SQLite), streamed chat (SSE) | ✅ [plan](backend/TODO.md) |
-| [ai/](ai/) | AI layer. Done so far: the orchestrator's intent router (Claude Haiku 4.5 via LangChain), standalone and not yet wired in. Still to come: retrieval (RAG), the Ask/Summary/Draft workflows, OCR. Until then the backend runs on rule-based **stand-ins** that quote the document directly. | 🚧 [plan](ai/TODO.md) |
-| [compose.yaml](compose.yaml) | The whole app in Docker: nginx (UI + `/api` proxy) in front of the backend | ✅ [integration plan](integration.todo.md) |
+| [ai/](ai/) | AI layer: the intent router, the Ask (hybrid RAG with citations), Summary and Draft workflows, and OCR ingestion. Claude (via LangChain) writes the answers, so the text of a chat turn goes to Anthropic's API; see the privacy note in [ai/README.md](ai/README.md). The backend uses the AI layer only when it is configured. By default it runs on rule-based **stand-ins** that quote the document directly. | 🚧 [plan](ai/TODO.md) |
+| [compose.yaml](compose.yaml) | The whole app in Docker: nginx (UI + `/api` proxy) in front of the backend. Guides: [backend/DOCKER.md](backend/DOCKER.md), [frontend/DOCKER.md](frontend/DOCKER.md) | ✅ [integration plan](integration.todo.md) |
+| [CD_readme.md](CD_readme.md) | Deploying to Azure Kubernetes Service (AKS): resources, steps and the to-do list. Manifests are in [deploy/k8s/](deploy/k8s/) | 🚧 [plan](cd.todo.md) |
 
 ## Running it
 
@@ -31,7 +32,7 @@ Prerequisites: [Node.js](https://nodejs.org/) 20+ and [uv](https://docs.astral.s
 | Backend only | `cd backend && uv run legallens-api` (API docs at `/api/docs`) | http://127.0.0.1:8000 |
 | **Full app, Docker** | `docker compose up --build`, then `cd backend && uv run python scripts/seed_demo.py --url http://127.0.0.1:8080` | http://127.0.0.1:8080 |
 
-Everything listens on `127.0.0.1` only. In Docker, only the frontend port is published, and the backend is reachable only through it.
+Everything listens on `127.0.0.1` only. In Docker, only the frontend port is published, and the backend is reachable only through it. The three backend image variants (stand-ins, AI, AI with bundled models), their environment variables and the frontend's `BACKEND_URL` are covered in [backend/DOCKER.md](backend/DOCKER.md) and [frontend/DOCKER.md](frontend/DOCKER.md).
 
 **Reset the demo data:** `uv run python scripts/seed_demo.py --fresh` (from `backend/`). This deletes every document and conversation, then loads the demo set again.
 
@@ -63,4 +64,4 @@ To show failures on purpose, start the backend with one of these settings:
 | `frontend/` | `npm run test:e2e` | The BRD demo path in a real browser, mock API |
 | `frontend/` | `npm run test:e2e:api` | The BRD demo path in a real browser **against the real backend** |
 
-CI (`.github/workflows/`) runs all of these. It also builds both Docker images and smoke-tests the Compose stack, streaming a chat reply through nginx. The backend checks run on Windows, macOS and Linux.
+CI (`.github/workflows/`) runs all of these. It also builds both Docker images and smoke-tests the Compose stack, streaming a chat reply through nginx. The backend checks run on Windows, macOS and Linux. The `backend-ci` workflow is the merge gate for `main`. The `cd` workflow, which deploys to AKS after a green `backend-ci` run on `main`, is drafted; its setup steps are in [CD_readme.md](CD_readme.md).

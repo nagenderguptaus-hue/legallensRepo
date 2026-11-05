@@ -20,6 +20,7 @@ from legallens.ids import new_id
 log = structlog.get_logger("legallens.http")
 
 _VALID_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+PROBE_PATHS = frozenset({"/api/health/live", "/api/health/ready"})
 
 
 class RequestContextMiddleware:
@@ -71,7 +72,9 @@ class RequestContextMiddleware:
                     )
                     await send_with_id({"type": "http.response.body", "body": body})
             finally:
-                log.info(
+                # Probes arrive every few seconds: log them only when they fail.
+                quiet = scope["path"] in PROBE_PATHS and status < 400
+                (log.debug if quiet else log.info)(
                     "request",
                     method=scope["method"],
                     path=scope["path"],

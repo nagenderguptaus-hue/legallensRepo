@@ -1,0 +1,161 @@
+name: cd
+
+# Continuous delivery to AKS. Runs after backend-ci passes on main (or by hand). It takes the
+# backend image that backend-ci built and tested, builds the frontend, pushes both to ACR, and
+# deploys them by commit SHA. Plan and decisions: cd.todo.md. Setup: CD_readme.md.
+
+on:
+  workflow_run:
+    workflows: ["backend-ci"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time. A queued deploy waits instead of cancelling a running one.
+concurrency:
+  group: cd-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read # read the backend-ci run and download its image artifact
+  id-token: write # OIDC login to Azure, no stored password
+
+env:
+  REGISTRY: ${{ vars.ACR_NAME }}.azurecr.io
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  AKS_NAME: ${{ vars.AKS_NAME }}
+
+jobs:
+  publish:
+    name: push images to ACR
+    # Only after a green backend-ci run on a push to main, or a manual run.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - name: find the backend-ci run and commit to deploy
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$EVENT" = "workflow_run" ]; then
+            run_id="$RUN_ID"
+            sha="$RUN_SHA"
+          else
+            # Manual run: the newest green backend-ci run on main.
+            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow backend-ci.yml \
+              --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+            [ -n "$run_id" ] || { echo "no green backend-ci run on main"; exit 1; }
+            sha=$(gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --json headSha --jq .headSha)
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+
+      - name: download the backend image from backend-ci
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-image
+          path: ${{ runner.temp }}/image
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: load the backend image
+        run: gunzip -c "$RUNNER_TEMP/image/backend-image.tar.gz" | docker load
+
+      - name: log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: log in to ACR
+        run: az acr login --name "$ACR_NAME"
+        env:
+          ACR_NAME: ${{ vars.ACR_NAME }}
+
+      - name: push the backend image (commit SHA and latest)
+        env:
+          SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          for tag in "$SHA" latest; do
+            docker tag legallens-backend:latest "$REGISTRY/legallens-backend:$tag"
+            docker push "$REGISTRY/legallens-backend:$tag"
+          done
+
+      # No frontend image exists in CI yet, so it is built here from the same commit.
+      - name: build the frontend image (linux/amd64)
+        env:
+          SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          docker build --platform linux/amd64 \
+            -t "$REGISTRY/legallens-frontend:$SHA" \
+            -t "$REGISTRY/legallens-frontend:latest" \
+            frontend
+
+      - name: push the frontend image (commit SHA and latest)
+        env:
+          SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          docker push "$REGISTRY/legallens-frontend:$SHA"
+          docker push "$REGISTRY/legallens-frontend:latest"
+
+  deploy:
+    name: deploy to AKS (dev)
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: dev
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.publish.outputs.sha }}
+
+      - name: log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: get the cluster credentials
+        run: >
+          az aks get-credentials --resource-group "$AZURE_RESOURCE_GROUP" --name "$AKS_NAME"
+          --overwrite-existing
+
+      # Point both images at this commit: the registry path and the SHA tag (see kustomization.yaml).
+      - name: set the image tags to the commit SHA
+        working-directory: deploy/k8s
+        env:
+          SHA: ${{ needs.publish.outputs.sha }}
+        run: |
+          sed -i -E \
+            -e "s#(newName: )legallens-(backend|frontend)\$#\1$REGISTRY/legallens-\2#" \
+            -e "s#(newTag: ).*#\1$SHA#" \
+            kustomization.yaml
+          cat kustomization.yaml
+
+      - name: apply the manifests
+        run: kubectl apply -k deploy/k8s
+
+      - name: wait for both rollouts
+        run: |
+          kubectl -n legallens rollout status deploy/backend --timeout=10m
+          kubectl -n legallens rollout status deploy/frontend --timeout=5m
+          kubectl -n legallens get pods -o wide
+
+      # Through the frontend's own nginx proxy: checks nginx, the Service DNS name and the backend.
+      - name: smoke test through the frontend proxy
+        run: kubectl -n legallens exec deploy/frontend -- wget -qO- http://127.0.0.1:8080/api/health/ready

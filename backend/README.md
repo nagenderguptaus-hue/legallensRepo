@@ -51,7 +51,9 @@ Every error has the same body, `{ "code", "message", "request_id" }`, and every 
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/health` | `{status, modelRuntime, model}` |
+| GET | `/api/health` | `{status, modelRuntime, model}` (the UI's status line; always 200) |
+| GET | `/api/health/live` | Liveness probe: 200 while the process answers, no dependencies |
+| GET | `/api/health/ready` | Readiness probe: 200 when it can take traffic, else 503. The Docker health check uses it. |
 | GET · POST | `/api/documents` | Library (newest first) · upload (multipart field `file`) |
 | GET · DELETE | `/api/documents/{id}` | Status (the UI polls this during ingestion) · delete everything derived from the document |
 | POST | `/api/documents/{id}/retry` | Re-run ingestion for a failed document |
@@ -172,7 +174,9 @@ docker run -p 127.0.0.1:8000:8000 -v legallens-data:/data legallens-backend
 
 For an image with the AI layer, add `--build-arg LL_EXTRAS=ai` (with Compose: `LL_EXTRAS=ai docker compose up --build`) and set `LL_INGESTION=legallens.adapters.ai:create_ingestion` (plus `LL_ORCHESTRATOR=legallens.adapters.ai:create_orchestrator` and `ANTHROPIC_API_KEY` in `.env` for Claude chat; `../ai/.env` is not in the image). Models then download into `/data/models` on first use.
 
-The image is multi-stage, runs as a non-root user and has a health check. Data lives on the `/data` volume. Inside the container the app listens on `0.0.0.0`, but the port is published only on the host's `127.0.0.1`, so it is never reachable from the network.
+**Full Docker guide:** [DOCKER.md](DOCKER.md) (the three image variants, environment variables, health probes, logs and clean-up, design decisions, AKS notes).
+
+The image is multi-stage, runs as a non-root user and has a health check (`/api/health/ready`). For Kubernetes, `/api/health/live` is the liveness probe, so a slow model warm-up never restarts the container. Data lives on the `/data` volume. Inside the container the app listens on `0.0.0.0`, but the port is published only on the host's `127.0.0.1`, so it is never reachable from the network.
 
 ## Development
 
@@ -185,7 +189,7 @@ uv run python scripts/export_openapi.py   # after an intended API change (refres
 uv run alembic revision --autogenerate -m "describe change"   # after changing db/models.py
 ```
 
-CI ([../.github/workflows/backend.yml](../.github/workflows/backend.yml)) runs these checks on Linux, Windows and macOS, and smoke-tests the Docker image.
+CI runs these checks on Linux, Windows and macOS, and smoke-tests the Docker image. [../.github/workflows/backend-ci.yml](../.github/workflows/backend-ci.yml) is the merge gate for `main`; [../.github/workflows/backend.yml](../.github/workflows/backend.yml) gives feedback on other branches.
 
 ## Troubleshooting
 

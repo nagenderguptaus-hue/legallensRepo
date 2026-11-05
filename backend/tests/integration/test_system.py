@@ -2,7 +2,9 @@ import pytest
 
 from legallens.config import Settings
 from legallens.main import run
+from legallens.ports.orchestrator import RuntimeHealth
 from tests.conftest import RunApp, Running
+from tests.fakes import ScriptedOrchestrator
 
 
 async def test_health_ok(r: Running) -> None:
@@ -19,6 +21,50 @@ async def test_health_degraded_when_model_runtime_is_down(run_app: RunApp) -> No
     async with run_app(standin_model_offline=True) as r:
         body = (await r.client.get("/api/health")).json()
         assert (body["status"], body["modelRuntime"]) == ("degraded", "unavailable")
+
+
+async def test_liveness_probe(r: Running) -> None:
+    res = await r.client.get("/api/health/live")
+    assert (res.status_code, res.json()) == (200, {"status": "alive"})
+
+
+async def test_readiness_probe_is_200_when_ready(r: Running) -> None:
+    res = await r.client.get("/api/health/ready")
+    assert (res.status_code, res.json()) == (
+        200,
+        {"status": "ready", "database": True, "storage": True, "modelRuntime": "ready"},
+    )
+
+
+async def test_readiness_stays_200_when_the_hosted_model_is_down(run_app: RunApp) -> None:
+    # Documents and conversations still work; chat reports the outage itself.
+    async with run_app(standin_model_offline=True) as r:
+        res = await r.client.get("/api/health/ready")
+        assert (res.status_code, res.json()["modelRuntime"]) == (200, "unavailable")
+
+
+class WarmingUp(ScriptedOrchestrator):
+    async def health(self) -> RuntimeHealth:
+        return RuntimeHealth(status="loading", model="warming up")
+
+
+async def test_readiness_is_503_while_models_warm_up(run_app: RunApp) -> None:
+    async with run_app(orchestrator=WarmingUp([])) as r:
+        res = await r.client.get("/api/health/ready")
+        assert (res.status_code, res.json()["status"]) == (503, "not_ready")
+        live = await r.client.get("/api/health/live")
+        assert live.status_code == 200  # never restarted for warming up
+
+
+async def test_readiness_is_503_when_the_database_is_down(
+    r: Running, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def down() -> bool:
+        return False
+
+    monkeypatch.setattr(r.container.db, "ping", down)
+    res = await r.client.get("/api/health/ready")
+    assert (res.status_code, res.json()["database"]) == (503, False)
 
 
 async def test_request_id_is_reused_when_valid_and_replaced_when_not(r: Running) -> None:

@@ -13,6 +13,7 @@ legallens-ai eval-rewrite                         score the query rewriter
 legallens-ai eval-ask                             score the Ask workflow (BRD §6 targets)
 legallens-ai bench-retrieval                      embedding / reranker bake-off (LegalBench-RAG)
 legallens-ai bench-ocr --configs ...              OCR engine / settings bake-off (synthetic scans)
+legallens-ai prefetch-models                      download + load the configured local models
 """
 
 import argparse
@@ -402,6 +403,33 @@ async def _bench_ocr(args: argparse.Namespace, settings: AISettings) -> int:
     return 0
 
 
+async def _prefetch_models(args: argparse.Namespace, settings: AISettings) -> int:
+    """Downloads every model the settings name into ``models_dir`` and loads each once, so a
+    container image (or an init container) can start without network access."""
+    import numpy as np
+
+    from legallens_ai.ingestion.ocr import make_ocr_engine
+    from legallens_ai.retrieval.models import make_embedder, make_reranker
+
+    print(f"models_dir: {settings.models_dir}")
+    started = time.perf_counter()
+    embedder = make_embedder(settings.embedding_model, settings.models_dir)
+    print(f"embedding {settings.embedding_model}: {await embedder.dimension()} dimensions")
+    reranker = make_reranker(settings.reranker_model, settings.models_dir)
+    await reranker.scores("warm-up", ["warm-up"])
+    print(f"reranker  {settings.reranker_model}: ok")
+    ocr = make_ocr_engine(
+        settings.ocr_engine,
+        settings.models_dir,
+        model_size=settings.ocr_model_size,
+        angle_cls=settings.ocr_angle_cls,
+    )
+    await ocr.read(np.full((64, 256), 255, dtype=np.uint8))
+    print(f"ocr       {ocr.name}: ok")
+    print(f"done in {time.perf_counter() - started:.0f} s")
+    return 0
+
+
 Command = Callable[[argparse.Namespace, AISettings], Coroutine[Any, Any, int]]
 COMMANDS: dict[str, Command] = {
     "index": _index,
@@ -415,6 +443,7 @@ COMMANDS: dict[str, Command] = {
     "eval-ask": _eval_ask,
     "bench-retrieval": _bench_retrieval,
     "bench-ocr": _bench_ocr,
+    "prefetch-models": _prefetch_models,
 }
 
 
@@ -472,3 +501,7 @@ def add_parsers(sub: Any) -> None:
     p.add_argument("--qualities", nargs="+", default=["clean", "noisy", "fax"])
     p.add_argument("--retrieval", action="store_true", help="also check retrieval on OCR'd text")
     p.add_argument("--limit", type=int, help="only the first N pages (quick runs)")
+
+    sub.add_parser(
+        "prefetch-models", help="download and load every configured local model (images, CI)"
+    )

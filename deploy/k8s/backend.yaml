@@ -1,0 +1,100 @@
+# Backend: one replica only. SQLite and the embedded vector index allow one writer, and the data
+# disk (ReadWriteOnce) can attach to one node only. Image and rollout: see cd.yml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+data:
+  # Stand-in adapters: no AI, no secret. Switch to the AI image later (cd.todo.md, section 4).
+  LL_INGESTION: standin
+  LL_ORCHESTRATOR: standin
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: legallens-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: managed-csi
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  # A disk can't attach to the old and new pod at once, so stop the old pod before starting the new.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        # Lets uid 10001 write to the freshly mounted disk (it is owned by root otherwise).
+        fsGroup: 10001
+      containers:
+        - name: backend
+          image: legallens-backend
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: backend-config
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          # Liveness only says the process is up. Readiness gates traffic (503 until ready).
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: legallens-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
