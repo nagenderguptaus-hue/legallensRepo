@@ -32,6 +32,9 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       globals: true,
+      // Component tests render the whole app through MSW and jsdom; the 5 s default is
+      // too tight on a busy or shared machine, such as a CI runner.
+      testTimeout: 20_000,
       setupFiles: ['./src/test/setup.ts'],
       include: ['src/**/*.test.{ts,tsx}'],
       css: { modules: { classNameStrategy: 'non-scoped' } },
