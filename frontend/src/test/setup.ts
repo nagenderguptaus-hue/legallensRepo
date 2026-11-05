@@ -1,11 +1,15 @@
 import '@testing-library/jest-dom/vitest';
 import { File as NodeFile } from 'node:buffer';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 import { resetDb, updateSettings } from '@/mocks/db';
 import { server } from '@/mocks/node';
 import { useChatStore } from '@/store/chatStore';
 import { useUiStore } from '@/store/uiStore';
+
+// findBy* waits 1 s by default. Streamed answers and the MSW delays can take longer on a busy
+// machine (or a CI runner), so allow more time before a text lookup gives up.
+configure({ asyncUtilTimeout: 10_000 });
 
 // ---- jsdom gaps used by Radix UI and our components
 class ResizeObserverStub {

@@ -1,4 +1,8 @@
-# Serves the built app and proxies /api to the backend container (same origin, so no CORS).
+# Serves the built app and proxies /api to the backend (same origin, so no CORS).
+#
+# A template: at container start the nginx image's entrypoint fills in ${BACKEND_URL},
+# ${PROXY_READ_TIMEOUT} and ${NGINX_LOCAL_RESOLVERS} from the environment (only those: see
+# NGINX_ENVSUBST_FILTER in the Dockerfile) and writes /etc/nginx/conf.d/default.conf.
 
 server {
     listen 8080;
@@ -9,10 +13,13 @@ server {
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy no-referrer always;
 
-    # Docker's DNS, re-resolved: nginx starts even if the backend is down (the UI then shows
-    # "service not reachable" on the 502) and follows the backend across restarts.
-    resolver 127.0.0.11 valid=10s ipv6=off;
-    set $backend http://backend:8000;
+    # The container's own DNS servers (from /etc/resolv.conf): Docker's embedded DNS on a
+    # Docker network, the cluster DNS on Kubernetes. Re-resolved every 10 s, so nginx starts
+    # even if the backend is down (the UI then shows "service not reachable" on the 502) and
+    # follows the backend across restarts. nginx does not use DNS search domains: on
+    # Kubernetes, give BACKEND_URL the service's full name (svc.namespace.svc.cluster.local).
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+    set $backend ${BACKEND_URL};
 
     location /api/ {
         proxy_pass $backend;
@@ -23,8 +30,9 @@ server {
         # Chat answers stream as Server-Sent Events: pass every token through immediately.
         proxy_buffering off;
         proxy_cache off;
-        proxy_read_timeout 360s; # backend's whole-reply limit is 300 s
-        proxy_send_timeout 360s;
+        # Longer than the backend's whole-reply limit (LL_STREAM_TOTAL_TIMEOUT_S, 600 s).
+        proxy_read_timeout ${PROXY_READ_TIMEOUT};
+        proxy_send_timeout ${PROXY_READ_TIMEOUT};
 
         # Uploads: 25 MB limit + multipart overhead; the backend enforces the real limit.
         client_max_body_size 26m;

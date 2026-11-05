@@ -69,6 +69,10 @@ src/
 - **Accessibility:** Radix primitives (focus management, keyboard support), visible focus rings, `aria-live` announcements when a reply finishes, and reduced-motion support.
 - **Fonts:** Inter and Source Serif 4 are bundled locally, so the app works offline.
 
+## Docker
+
+The production image is nginx serving the build and proxying `/api` to the backend. Set `BACKEND_URL` (default `http://backend:8000`) to point it at a different backend. Build, run and environment variables: [DOCKER.md](DOCKER.md).
+
 ## Running against the real backend
 
 The UI only ever calls relative `/api/*` URLs, so switching backends needs no UI code changes. Backend mode is the Vite mode file [.env.backend](.env.backend):

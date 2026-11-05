@@ -45,6 +45,24 @@ class Health(CamelModel):
     processing: Literal["local", "cloud"]
 
 
+class Liveness(CamelModel):
+    """The process is up and serving requests (Kubernetes liveness probe)."""
+
+    status: Literal["alive"]
+
+
+class Readiness(CamelModel):
+    """Whether this instance can take traffic (Kubernetes readiness probe): HTTP 200 when
+    ``ready``, 503 when not. A model runtime that is ``unavailable`` (e.g. the hosted model is
+    down) still counts as ready: documents and conversations keep working, and chat reports
+    the outage itself. Only ``loading`` (local models still warming up) is not ready."""
+
+    status: Literal["ready", "not_ready"]
+    database: bool
+    storage: bool
+    model_runtime: Literal["ready", "loading", "unavailable"]
+
+
 # ---------------------------------------------------------------- documents
 
 
