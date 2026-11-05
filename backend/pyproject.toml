@@ -75,6 +75,13 @@ plugins = ["pydantic.mypy"]
 module = ["fpdf.*"]
 ignore_missing_imports = true
 
+# Optional AI-layer dependencies. They sit in ai/'s "qwen" and "bench" groups, which
+# `uv sync --extra ai` does not install, so CI type-checks without them. The code that imports
+# them is written to run without them, so their types are not needed here.
+[[tool.mypy.overrides]]
+module = ["torch", "torch.*", "transformers", "transformers.*", "rapidfuzz", "rapidfuzz.*"]
+ignore_missing_imports = true
+
 [[tool.mypy.overrides]]
 module = ["legallens.db.migrations.*"]
 disallow_untyped_defs = false
